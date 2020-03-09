@@ -4,8 +4,8 @@ use crate::token::{Token, TokenType};
 use std::str;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub struct LexerError {
-    src: String,
+pub struct LexerError<'a> {
+    src: &'a str,
     pos: Position,
     msg: &'static str,
 }
@@ -16,7 +16,7 @@ pub struct Lexer<'a> {
     cur: usize,
     pos: Position,
     tokens: Vec<Token<'a>>,
-    error: Option<Error>,
+    error: Option<Error<'a>>,
 }
 
 fn is_whitespace(c: &u8) -> bool {
@@ -103,11 +103,11 @@ impl<'a> Lexer<'a> {
         self.next_is(|&a| c == a)
     }
 
-    fn src_seg<'b>(&'b self) -> &'a str {
-        str::from_utf8(&self.src[self.start..self.cur]).unwrap()
+    fn src_seg(&self) -> &'a str {
+        self.src_seg_offset(0)
     }
 
-    fn src_seg_offset<'b>(&'b self, offset: usize) -> &'a str {
+    fn src_seg_offset(&self, offset: usize) -> &'a str {
         str::from_utf8(&self.src[self.start + offset..self.cur - offset]).unwrap()
     }
 
@@ -129,19 +129,15 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn error(&mut self, msg: &'static str) -> Error {
-        let error = Error::LexerError(LexerError {
+    fn error(&mut self, msg: &'static str) {
+        self.error = Some(Error::LexerError(LexerError {
             pos: self.pos.clone(),
-            src: String::from(self.src_seg()),
+            src: self.src_seg(),
             msg: msg,
-        });
-
-        self.error = Some(error.clone());
-
-        error
+        }));
     }
 
-    pub fn parse<'b>(&'b mut self) -> Result<&'b Vec<Token<'a>>, Error> {
+    pub fn parse(&mut self) -> Result<&Vec<Token<'a>>, &Error<'a>> {
         while let Some(c) = self.next() {
             match *c {
                 b'!' => {
@@ -165,7 +161,7 @@ impl<'a> Lexer<'a> {
                         }
                     } else if self.next_is(is_digit) {
                         // **This is a decimal**
-                        self.number()?;
+                        self.number();
                     } else {
                         self.add_token(TokenType::from_str(".").unwrap());
                     }
@@ -220,13 +216,13 @@ impl<'a> Lexer<'a> {
                     self.add_token(TokenType::from_str(symbol).unwrap())
                 }
                 c @ b'+' | c @ b'-' | c @ b'&' | c @ b'|' => {
-                    let symbol = if self.next_match(b'=') {
+                    if self.next_match(b'=') {
                         self.add_token(TokenType::from_bytes(&[c, b'=']).unwrap())
                     } else if self.next_match(c) {
                         self.add_token(TokenType::from_bytes(&[c, c]).unwrap())
                     } else {
                         self.add_token(TokenType::from_bytes(&[c]).unwrap())
-                    };
+                    }
                 }
                 c @ b'*' | c @ b'/' | c @ b'^' | c @ b'%' => {
                     if self.next_match(b'=') {
@@ -248,28 +244,36 @@ impl<'a> Lexer<'a> {
                 | c @ b'?'
                 | c @ b':' => self.add_token(TokenType::from_bytes(&[c]).unwrap()),
 
-                b'"' => self.string(b'"')?,
-                b'\'' => self.string(b'\'')?,
-                b'`' => self.template()?,
+                b'"' => self.string(b'"'),
+                b'\'' => self.string(b'\''),
+                b'`' => self.template(),
                 _ => {
                     if is_whitespace(c) {
                         // TODO: we should also update the position
                         self.consume();
                     } else if is_digit(c) {
-                        self.number()?;
+                        self.number();
                     } else if is_identifier_start(c) {
-                        self.identifier()?;
+                        self.identifier();
                     } else {
-                        return Err(self.error("Unexpected character"));
+                        self.error("Unexpected character");
                     }
                 }
             }
+
+            // If there is an error. Return
+            if let Some(err) = &self.error {
+                break;
+            }
         }
 
-        Ok(&self.tokens)
+        match &self.error {
+            Some(err) => Err(err),
+            None => Ok(&self.tokens),
+        }
     }
 
-    fn string(&mut self, quote: u8) -> Result<(), Error> {
+    fn string(&mut self, quote: u8) {
         while let Some(&c) = self.peek() {
             if c == quote {
                 break;
@@ -280,21 +284,19 @@ impl<'a> Lexer<'a> {
 
         if self.is_ended() {
             // This is an error, string literal should close
-            Err(self.error("String literal unclosed"))
+            self.error("String literal unclosed");
         } else {
             // The closing quote
             self.next();
             self.add_lit_token(TokenType::String, self.src_seg_offset(1));
-
-            Ok(())
         }
     }
 
-    fn template(&mut self) -> Result<(), Error> {
+    fn template(&mut self) {
         unimplemented!()
     }
 
-    fn number(&mut self) -> Result<(), Error> {
+    fn number(&mut self) {
         unimplemented!()
         // let tt = TokenType::Decimal;
 
@@ -305,7 +307,7 @@ impl<'a> Lexer<'a> {
         // Ok(())
     }
 
-    fn identifier(&mut self) -> Result<(), Error> {
+    fn identifier(&mut self) {
         let tt = TokenType::Identifier;
 
         while let Some(c) = self.peek() {
@@ -317,8 +319,6 @@ impl<'a> Lexer<'a> {
         }
 
         self.add_token(tt);
-
-        Ok(())
     }
 }
 
@@ -333,7 +333,7 @@ mod tests {
     fn boolean_single_true() {
         assert_eq!(
             Lexer::new("true").parse(),
-            Ok(&Token::from_vec(vec!["true"]).unwrap())
+            Token::from_vec(vec!["true"]).as_ref()
         )
     }
 
@@ -341,7 +341,7 @@ mod tests {
     fn boolean_single_false() {
         assert_eq!(
             Lexer::new("false").parse(),
-            Ok(&Token::from_vec(vec!["false"]).unwrap())
+            Token::from_vec(vec!["false"]).as_ref()
         )
     }
 
@@ -349,7 +349,7 @@ mod tests {
     fn boolean_single_False() {
         assert_ne!(
             Lexer::new("False").parse(),
-            Ok(&Token::from_vec(vec!["false"]).unwrap())
+            Token::from_vec(vec!["false"]).as_ref()
         )
     }
 
@@ -357,7 +357,7 @@ mod tests {
     fn boolean_single_True() {
         assert_ne!(
             Lexer::new("True").parse(),
-            Ok(&Token::from_vec(vec!["true"]).unwrap())
+            Token::from_vec(vec!["true"]).as_ref()
         )
     }
 
@@ -365,7 +365,7 @@ mod tests {
     fn boolean_multiple() {
         assert_eq!(
             Lexer::new("true false true false").parse(),
-            Ok(&Token::from_vec(vec!["true", "false", "true", "false"]).unwrap())
+            Token::from_vec(vec!["true", "false", "true", "false"]).as_ref()
         )
     }
 
@@ -373,7 +373,7 @@ mod tests {
     fn reserve() {
         assert_eq!(
             Lexer::new("this await in break do    null").parse(),
-            Ok(&Token::from_vec(vec!["this", "await", "in", "break", "do", "null"]).unwrap())
+            Token::from_vec(vec!["this", "await", "in", "break", "do", "null"]).as_ref()
         )
     }
 
@@ -387,7 +387,7 @@ mod tests {
             while if"
             )
             .parse(),
-            Ok(&Token::from_vec(vec!["this", "in", "break", "while", "if"]).unwrap())
+            Token::from_vec(vec!["this", "in", "break", "while", "if"]).as_ref()
         )
     }
 
@@ -395,11 +395,11 @@ mod tests {
     fn operators() {
         assert_eq!(
             Lexer::new(r"+++= ===!=====)([]/==>))<=>").parse(),
-            Ok(&Token::from_vec(vec![
+            Token::from_vec(vec![
                 "++", "+=", "===", "!==", "===", ")", "(", "[", "]", "/=", "=>", ")", ")", "<=",
                 ">"
             ])
-            .unwrap())
+            .as_ref()
         )
     }
 
@@ -463,9 +463,9 @@ mod tests {
     fn string_unclosed() {
         assert_eq!(
             Lexer::new(r#""Hello world!"#).parse(),
-            Err(Error::LexerError(LexerError {
+            Err(&Error::LexerError(LexerError {
                 pos: Position::new(0, 0),
-                src: String::from("\"Hello world!"),
+                src: "\"Hello world!",
                 msg: "String literal unclosed"
             }))
         )

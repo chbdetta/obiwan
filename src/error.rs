@@ -1,7 +1,7 @@
 use crate::lexer::LexerError;
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum Error {
-    LexerError(LexerError),
+pub enum Error<'a> {
+    LexerError(LexerError<'a>),
     TokenConvertError,
 }
