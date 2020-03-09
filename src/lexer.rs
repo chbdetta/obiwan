@@ -7,7 +7,7 @@ use std::str;
 pub struct LexerError<'a> {
     src: &'a str,
     pos: Position,
-    msg: &'static str,
+    msg: String,
 }
 
 pub struct Lexer<'a> {
@@ -129,11 +129,11 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn error(&mut self, msg: &'static str) {
+    fn error(&mut self, msg: &str) {
         self.error = Some(Error::LexerError(LexerError {
             pos: self.pos.clone(),
             src: self.src_seg(),
-            msg: msg,
+            msg: String::from(msg),
         }));
     }
 
@@ -273,9 +273,17 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn string(&mut self, quote: u8) {
+    fn string(&mut self, delimiter: u8) {
+        self.string_or_template(delimiter, TokenType::String);
+    }
+
+    fn template(&mut self) {
+        self.string_or_template(b'`', TokenType::Template);
+    }
+
+    fn string_or_template(&mut self, delimiter: u8, tt: TokenType) {
         while let Some(&c) = self.peek() {
-            if c == quote {
+            if c == delimiter {
                 break;
             }
 
@@ -284,16 +292,12 @@ impl<'a> Lexer<'a> {
 
         if self.is_ended() {
             // This is an error, string literal should close
-            self.error("String literal unclosed");
+            self.error(&format!("{:?} is unclosed", tt)[..]);
         } else {
             // The closing quote
             self.next();
-            self.add_lit_token(TokenType::String, self.src_seg_offset(1));
+            self.add_lit_token(tt, self.src_seg_offset(1));
         }
-    }
-
-    fn template(&mut self) {
-        unimplemented!()
     }
 
     fn number(&mut self, seen_dot: bool) {
@@ -492,6 +496,17 @@ mod tests {
     }
 
     #[test]
+    fn template() {
+        assert_eq!(
+            Lexer::new(r#"`This is really fun`"#).parse(),
+            Ok(&vec![Token::new_lit(
+                TokenType::Template,
+                "This is really fun"
+            )])
+        )
+    }
+
+    #[test]
     fn string_include_reserve() {
         assert_eq!(
             Lexer::new(r#""this is in my switch while""#).parse(),
@@ -509,7 +524,7 @@ mod tests {
             Err(&Error::LexerError(LexerError {
                 pos: Position::new(0, 0),
                 src: "\"Hello world!",
-                msg: "String literal unclosed"
+                msg: String::from("String is unclosed")
             }))
         )
     }
