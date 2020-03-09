@@ -160,8 +160,8 @@ impl<'a> Lexer<'a> {
                             self.error("Unexpected character");
                         }
                     } else if self.next_is(is_digit) {
-                        // **This is a decimal**
-                        self.number();
+                        // **This is a decimal starts with a .**
+                        self.number(true);
                     } else {
                         self.add_token(TokenType::from_str(".").unwrap());
                     }
@@ -252,7 +252,7 @@ impl<'a> Lexer<'a> {
                         // TODO: we should also update the position
                         self.consume();
                     } else if is_digit(c) {
-                        self.number();
+                        self.number(false);
                     } else if is_identifier_start(c) {
                         self.identifier();
                     } else {
@@ -296,15 +296,35 @@ impl<'a> Lexer<'a> {
         unimplemented!()
     }
 
-    fn number(&mut self) {
-        unimplemented!()
-        // let tt = TokenType::Decimal;
+    fn number(&mut self, seen_dot: bool) {
+        if seen_dot {
+            self.digits();
+            if self.next_match(b'e') {
+                self.digits()
+            }
+        } else {
+            self.digits();
 
-        // while let Some(c) = self.peek() {
-        //     if !is_digit(c) || c != b'.' {}
-        // }
+            if self.next_match(b'.') {
+                self.digits();
+                if self.next_match(b'e') {
+                    self.digits()
+                }
+            } else if self.next_match(b'e') {
+                self.digits();
+            }
+        }
 
-        // Ok(())
+        self.add_lit_token(TokenType::Decimal, self.src_seg());
+    }
+
+    fn digits(&mut self) {
+        while let Some(c) = self.peek() {
+            if !is_digit(c) {
+                break;
+            }
+            self.next();
+        }
     }
 
     fn identifier(&mut self) {
@@ -422,6 +442,29 @@ mod tests {
                 Token::new_lit(TokenType::Decimal, "0.12341"),
                 Token::new_lit(TokenType::Decimal, "12312."),
                 Token::new_lit(TokenType::Decimal, "122.2e8")
+            ])
+        )
+    }
+
+    #[test]
+    fn numbers_multiple_dots() {
+        assert_eq!(
+            Lexer::new("123.4.5.6").parse(),
+            Ok(&vec![
+                Token::new_lit(TokenType::Decimal, "123.4"),
+                Token::new_lit(TokenType::Decimal, ".5"),
+                Token::new_lit(TokenType::Decimal, ".6")
+            ])
+        )
+    }
+
+    #[test]
+    fn numbers_start_with_dot() {
+        assert_eq!(
+            Lexer::new(".12345.123").parse(),
+            Ok(&vec![
+                Token::new_lit(TokenType::Decimal, ".12345"),
+                Token::new_lit(TokenType::Decimal, ".123")
             ])
         )
     }
