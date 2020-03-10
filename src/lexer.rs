@@ -137,7 +137,7 @@ impl<'a> Lexer<'a> {
         }));
     }
 
-    pub fn parse(&mut self) -> Result<&Vec<Token<'a>>, &Error<'a>> {
+    pub fn parse(&mut self) -> Result<&Vec<Token<'a>>, Error<'a>> {
         while let Some(c) = self.next() {
             match *c {
                 b'!' => {
@@ -268,7 +268,7 @@ impl<'a> Lexer<'a> {
         }
 
         match &self.error {
-            Some(err) => Err(err),
+            Some(err) => Err(err.clone()),
             None => Ok(&self.tokens),
         }
     }
@@ -357,7 +357,7 @@ mod tests {
     fn boolean_single_true() {
         assert_eq!(
             Lexer::new("true").parse(),
-            Token::from_vec(vec!["true"]).as_ref()
+            Ok(&Token::from_vec(vec!["true"]).unwrap())
         )
     }
 
@@ -365,7 +365,7 @@ mod tests {
     fn boolean_single_false() {
         assert_eq!(
             Lexer::new("false").parse(),
-            Token::from_vec(vec!["false"]).as_ref()
+            Ok(&Token::from_vec(vec!["false"]).unwrap())
         )
     }
 
@@ -373,7 +373,7 @@ mod tests {
     fn boolean_single_False() {
         assert_ne!(
             Lexer::new("False").parse(),
-            Token::from_vec(vec!["false"]).as_ref()
+            Ok(&Token::from_vec(vec!["false"]).unwrap())
         )
     }
 
@@ -381,7 +381,7 @@ mod tests {
     fn boolean_single_True() {
         assert_ne!(
             Lexer::new("True").parse(),
-            Token::from_vec(vec!["true"]).as_ref()
+            Ok(&Token::from_vec(vec!["true"]).unwrap())
         )
     }
 
@@ -389,7 +389,7 @@ mod tests {
     fn boolean_multiple() {
         assert_eq!(
             Lexer::new("true false true false").parse(),
-            Token::from_vec(vec!["true", "false", "true", "false"]).as_ref()
+            Ok(&Token::from_vec(vec!["true", "false", "true", "false"]).unwrap())
         )
     }
 
@@ -397,7 +397,7 @@ mod tests {
     fn reserve() {
         assert_eq!(
             Lexer::new("this await in break do    null").parse(),
-            Token::from_vec(vec!["this", "await", "in", "break", "do", "null"]).as_ref()
+            Ok(&Token::from_vec(vec!["this", "await", "in", "break", "do", "null"]).unwrap())
         )
     }
 
@@ -411,7 +411,7 @@ mod tests {
             while if"
             )
             .parse(),
-            Token::from_vec(vec!["this", "in", "break", "while", "if"]).as_ref()
+            Ok(&Token::from_vec(vec!["this", "in", "break", "while", "if"]).unwrap())
         )
     }
 
@@ -419,11 +419,11 @@ mod tests {
     fn operators() {
         assert_eq!(
             Lexer::new(r"+++= ===!=====)([]/==>))<=>").parse(),
-            Token::from_vec(vec![
+            Ok(&Token::from_vec(vec![
                 "++", "+=", "===", "!==", "===", ")", "(", "[", "]", "/=", "=>", ")", ")", "<=",
                 ">"
             ])
-            .as_ref()
+            .unwrap())
         )
     }
 
@@ -521,11 +521,44 @@ mod tests {
     fn string_unclosed() {
         assert_eq!(
             Lexer::new(r#""Hello world!"#).parse(),
-            Err(&Error::LexerError(LexerError {
+            Err(Error::LexerError(LexerError {
                 pos: Position::new(0, 0),
                 src: "\"Hello world!",
                 msg: String::from("String is unclosed")
             }))
         )
+    }
+
+    #[test]
+    fn complicated() {
+        let mut lexer = Lexer::new(
+            r#"
+        import { createFactory } from 'react'
+import setDisplayName from './setDisplayName'
+import wrapDisplayName from './wrapDisplayName'
+
+const flattenProp = propName => BaseComponent => {
+  const factory = createFactory(BaseComponent)
+  const FlattenProp = props =>
+    factory({
+      ...props,
+      ...props[propName],
+    })
+
+  if (process.env.NODE_ENV !== 'production') {
+    return setDisplayName(wrapDisplayName(BaseComponent, 'flattenProp'))(
+      FlattenProp
+    )
+  }
+  return FlattenProp
+}
+
+export default flattenProp
+        "#,
+        );
+
+        if let Err(err) = lexer.parse() {
+            assert!(true, "error");
+        };
     }
 }
