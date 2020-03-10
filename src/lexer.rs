@@ -262,7 +262,7 @@ impl<'a> Lexer<'a> {
             }
 
             // If there is an error. Return
-            if let Some(err) = &self.error {
+            if let Some(_) = &self.error {
                 break;
             }
         }
@@ -370,6 +370,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(non_snake_case)]
     fn boolean_single_False() {
         assert_ne!(
             Lexer::new("False").parse(),
@@ -378,6 +379,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(non_snake_case)]
     fn boolean_single_True() {
         assert_ne!(
             Lexer::new("True").parse(),
@@ -557,7 +559,7 @@ export default flattenProp
         "#,
         );
 
-        if let Err(err) = lexer.parse() {
+        if let Err(_) = lexer.parse() {
             assert!(true, "error");
         };
     }
