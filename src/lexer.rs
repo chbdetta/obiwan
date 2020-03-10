@@ -14,7 +14,8 @@ pub struct Lexer<'a> {
     src: &'a [u8],
     start: usize,
     cur: usize,
-    pos: Position,
+    cur_pos: Position,
+    start_pos: Position,
     tokens: Vec<Token<'a>>,
     error: Option<Error<'a>>,
 }
@@ -55,7 +56,8 @@ impl<'a> Lexer<'a> {
             src: bytes,
             cur: 0,
             start: 0,
-            pos: Position::new(0, 0),
+            cur_pos: pos!(0, 0),
+            start_pos: pos!(0, 0),
             tokens: vec![],
             error: None,
         }
@@ -64,7 +66,13 @@ impl<'a> Lexer<'a> {
     fn next(&mut self) -> Option<&'a u8> {
         let el = self.src.get(self.cur);
 
-        if let Some(_) = el {
+        if let Some(c) = el {
+            if is_line_feed(c) {
+                self.cur_pos = pos!(self.cur_pos.row + 1, 0);
+            } else {
+                self.cur_pos = self.cur_pos + pos!(0, 1);
+            }
+
             self.cur += 1;
         }
 
@@ -77,6 +85,7 @@ impl<'a> Lexer<'a> {
 
     fn consume(&mut self) {
         self.start = self.cur;
+        self.start_pos = self.cur_pos;
     }
 
     fn is_ended(&self) -> bool {
@@ -123,7 +132,12 @@ impl<'a> Lexer<'a> {
         if self.start < self.src.len() {
             let src_seg = self.src_seg();
 
-            self.tokens.push(Token::new(tt, None, Some(src_seg), lit));
+            self.tokens.push(Token::new(
+                tt,
+                Some([self.start_pos, self.cur_pos]),
+                Some(src_seg),
+                lit,
+            ));
 
             self.consume();
         }
@@ -131,7 +145,7 @@ impl<'a> Lexer<'a> {
 
     fn error(&mut self, msg: &str) {
         self.error = Some(Error::LexerError(LexerError {
-            pos: self.pos.clone(),
+            pos: self.cur_pos.clone(),
             src: self.src_seg(),
             msg: String::from(msg),
         }));
@@ -524,7 +538,7 @@ mod tests {
         assert_eq!(
             Lexer::new(r#""Hello world!"#).parse(),
             Err(Error::LexerError(LexerError {
-                pos: Position::new(0, 0),
+                pos: pos!(0, 13),
                 src: "\"Hello world!",
                 msg: String::from("String is unclosed")
             }))

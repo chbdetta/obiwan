@@ -1,19 +1,21 @@
-#[derive(Debug, Eq, PartialEq, Clone, Default)]
+use std::ops::Add;
+
+#[derive(Debug, Eq, PartialEq, Clone, Copy, Default)]
 pub struct Position {
-    row: usize,
-    col: usize,
+    pub row: usize,
+    pub col: usize,
 }
 
 impl Position {
     pub fn new(row: usize, col: usize) -> Self {
         Position { row: row, col: col }
     }
+}
 
-    pub fn set_row(&mut self, row: usize) {
-        self.row = row;
-    }
+impl Add<Self> for Position {
+    type Output = Self;
 
-    pub fn set_col(&mut self, col: usize) {
-        self.col = col;
+    fn add(self, other: Self) -> Self::Output {
+        pos!(self.row + other.row, self.col + other.col)
     }
 }

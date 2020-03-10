@@ -1,5 +1,8 @@
 #![allow(dead_code)]
 
+#[macro_use]
+mod macros;
+
 mod error;
 mod eval;
 mod lexer;

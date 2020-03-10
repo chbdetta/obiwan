@@ -4,7 +4,7 @@ use crate::pos::Position;
 #[derive(Clone, Eq, Debug)]
 pub struct Token<'a> {
     pub tt: TokenType,
-    pub pos: Option<Position>,
+    pub pos: Option<[Position; 2]>,
     pub literal: Option<&'a str>,
     pub src: Option<&'a str>,
 }
@@ -18,7 +18,7 @@ impl<'a> PartialEq for Token<'a> {
 impl<'a> Token<'a> {
     pub fn new(
         tt: TokenType,
-        pos: Option<Position>,
+        pos: Option<[Position; 2]>,
         src: Option<&'a str>,
         literal: Option<&'a str>,
     ) -> Self {
