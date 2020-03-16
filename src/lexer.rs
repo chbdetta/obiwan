@@ -4,8 +4,8 @@ use crate::token::{Token, TokenType};
 use std::str;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub struct LexerError<'a> {
-    src: &'a str,
+pub struct LexerError {
+    src: String,
     pos: Position,
     msg: String,
 }
@@ -16,8 +16,8 @@ pub struct Lexer<'a> {
     cur: usize,
     cur_pos: Position,
     start_pos: Position,
-    tokens: Vec<Token<'a>>,
-    error: Option<Error<'a>>,
+    tokens: Vec<Token>,
+    error: Option<Error>,
 }
 
 fn is_whitespace(c: &u8) -> bool {
@@ -146,12 +146,12 @@ impl<'a> Lexer<'a> {
     fn error(&mut self, msg: &str) {
         self.error = Some(Error::LexerError(LexerError {
             pos: self.cur_pos.clone(),
-            src: self.src_seg(),
+            src: String::from(self.src_seg()),
             msg: String::from(msg),
         }));
     }
 
-    pub fn parse(&mut self) -> Result<&Vec<Token<'a>>, Error<'a>> {
+    pub fn parse(&mut self) -> Result<&Vec<Token>, Error> {
         while let Some(c) = self.next() {
             match *c {
                 b'!' => {
@@ -539,7 +539,7 @@ mod tests {
             Lexer::new(r#""Hello world!"#).parse(),
             Err(Error::LexerError(LexerError {
                 pos: pos!(0, 13),
-                src: "\"Hello world!",
+                src: String::from("\"Hello world!"),
                 msg: String::from("String is unclosed")
             }))
         )

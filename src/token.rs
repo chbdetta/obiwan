@@ -2,36 +2,36 @@ use crate::error::Error;
 use crate::pos::Position;
 
 #[derive(Clone, Eq, Debug)]
-pub struct Token<'a> {
+pub struct Token {
     pub tt: TokenType,
     pub pos: Option<[Position; 2]>,
-    pub literal: Option<&'a str>,
-    pub src: Option<&'a str>,
+    pub literal: Option<String>,
+    pub src: Option<String>,
 }
 
-impl<'a> PartialEq for Token<'a> {
+impl PartialEq for Token {
     fn eq(&self, other: &Self) -> bool {
         self.tt == other.tt && self.literal == other.literal
     }
 }
 
-impl<'a> Token<'a> {
+impl Token {
     pub fn new(
         tt: TokenType,
         pos: Option<[Position; 2]>,
-        src: Option<&'a str>,
-        literal: Option<&'a str>,
+        src: Option<&str>,
+        literal: Option<&str>,
     ) -> Self {
         Token {
             tt: tt,
             pos: pos,
-            src: src,
-            literal: literal,
+            src: src.map(String::from),
+            literal: literal.map(String::from),
         }
         .into_reserve()
     }
 
-    pub fn new_lit(tt: TokenType, s: &'a str) -> Self {
+    pub fn new_lit(tt: TokenType, s: &str) -> Self {
         Self::new(tt, None, None, Some(s))
     }
 
@@ -57,16 +57,13 @@ impl<'a> Token<'a> {
     // Turn into reserve type
     fn into_reserve(mut self) -> Self {
         match self.tt {
-            TokenType::Identifier => {
-                let src = self.src.unwrap();
-                match TokenType::from_str(src) {
-                    Ok(tt) => {
-                        self.tt = tt;
-                        self
-                    }
-                    _ => self,
+            TokenType::Identifier => match TokenType::from_str(self.src.as_ref().unwrap()) {
+                Ok(tt) => {
+                    self.tt = tt;
+                    self
                 }
-            }
+                _ => self,
+            },
             _ => self,
         }
     }
