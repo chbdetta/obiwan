@@ -205,7 +205,7 @@ impl TokenType {
             "in" => Ok(TokenType::In),
             "typeof" => Ok(TokenType::Typeof),
             "case" => Ok(TokenType::Case),
-            "Else" => Ok(TokenType::Else),
+            "else" => Ok(TokenType::Else),
             "Instanceof" => Ok(TokenType::Instanceof),
             "var" => Ok(TokenType::Var),
             "catch" => Ok(TokenType::Catch),
