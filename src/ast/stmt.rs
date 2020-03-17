@@ -29,7 +29,9 @@ pub enum Stmt {
 }
 
 #[derive(Debug, Clone)]
-pub struct Block(pub Vec<Stmt>);
+pub struct Block {
+    pub stmts: Vec<Stmt>,
+}
 #[derive(Debug, Clone)]
 pub struct Var(pub VarBind);
 #[derive(Debug, Clone)]
@@ -39,7 +41,11 @@ pub struct Empty;
 #[derive(Debug, Clone)]
 pub struct Expr(pub EExpr);
 #[derive(Debug, Clone)]
-pub struct If(pub EExpr, pub Box<Stmt>, pub Option<Box<Stmt>>);
+pub struct If {
+    pub cond: EExpr,
+    pub body: Box<Stmt>,
+    pub elses: Vec<Box<Stmt>>,
+}
 #[derive(Debug, Clone)]
 pub struct While(pub EExpr, pub Box<Stmt>);
 #[derive(Debug, Clone)]
@@ -81,7 +87,7 @@ pub struct GeneratorDeclr;
 
 impl Codegen for Block {
     fn to_code(&self) -> String {
-        format!("{{{}}}", self.0.to_code(),)
+        format!("{{{}}}", self.stmts.to_code(),)
     }
 }
 
@@ -113,9 +119,9 @@ impl Codegen for If {
     fn to_code(&self) -> String {
         format!(
             "if({}) {} else {}",
-            self.0.to_code(),
-            self.1.to_code(),
-            self.2.to_code()
+            self.cond.to_code(),
+            self.body.to_code(),
+            self.elses.to_code()
         )
     }
 }

@@ -26,7 +26,7 @@ impl ParserError {
 }
 
 pub fn parse(tokens: &[Token]) -> Result<Program, Error> {
-    match many0(stmt)(tokens) {
+    match stmt_list(tokens) {
         Ok((left_input, statements)) => {
             if left_input.is_empty() {
                 Ok(Program::Script(statements))
@@ -239,9 +239,13 @@ fn expr_primary(input: Input) -> ParseResult<Expr> {
     ))(input)
 }
 
+fn stmt_list(input: Input) -> ParseResult<Vec<Stmt>> {
+    many0(alt((stmt, declr)))(input)
+}
+
 fn stmt(input: Input) -> ParseResult<Stmt> {
     map_res(
-        terminated(opt(alt((stmt_declr, stmt_expr, stmt_block))), t(";")),
+        terminated(opt(alt((stmt_expr, stmt_block))), t(";")),
         |s| -> Result<_, ()> {
             match s {
                 Some(s) => Ok(s),
@@ -255,7 +259,7 @@ fn stmt_expr(input: Input) -> ParseResult<Stmt> {
     map_res(expr, |e| -> Result<_, ()> { Ok(Stmt::Expr(stmt::Expr(e))) })(input)
 }
 
-fn stmt_declr(input: Input) -> ParseResult<Stmt> {
+fn declr(input: Input) -> ParseResult<Stmt> {
     map_res(
         pair(
             tuple((
@@ -292,7 +296,19 @@ fn stmt_declr(input: Input) -> ParseResult<Stmt> {
 }
 
 fn stmt_if(input: Input) -> ParseResult<Stmt> {
-    unimplemented!()
+    map_res(
+        pair(
+            preceded(t("if"), delimited(t("("), expr, t(")"))),
+            pair(stmt, many0(preceded(t("else"), stmt))),
+        ),
+        |(e, (b, s))| -> Result<_, ()> {
+            Ok(Stmt::If(stmt::If {
+                cond: e,
+                body: Box::new(b),
+                elses: s.iter().cloned().map(Box::new).collect(),
+            }))
+        },
+    )(input)
 }
 
 fn stmt_while(input: Input) -> ParseResult<Stmt> {
@@ -360,7 +376,10 @@ fn stmt_lexical(input: Input) -> ParseResult<Stmt> {
 }
 
 fn stmt_block(input: Input) -> ParseResult<Stmt> {
-    delimited(t("{"), stmt, t("}"))(input)
+    map_res(
+        delimited(t("{"), stmt_list, t("}")),
+        |list| -> Result<_, ()> { Ok(Stmt::Block(stmt::Block { stmts: list })) },
+    )(input)
 }
 
 #[cfg(test)]
