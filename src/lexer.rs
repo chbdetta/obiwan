@@ -132,12 +132,8 @@ impl<'a> Lexer<'a> {
         if self.start < self.src.len() {
             let src_seg = self.src_seg();
 
-            self.tokens.push(Token::new(
-                tt,
-                Some([self.start_pos, self.cur_pos]),
-                Some(src_seg),
-                lit,
-            ));
+            self.tokens
+                .push(Token::new(tt, [self.start_pos, self.cur_pos], src_seg, lit));
 
             self.consume();
         }

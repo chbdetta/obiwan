@@ -1,12 +1,19 @@
+use crate::codegen::Codegen;
 use crate::error::Error;
 use crate::pos::Position;
 
 #[derive(Clone, Eq, Debug)]
 pub struct Token {
     pub tt: TokenType,
-    pub pos: Option<[Position; 2]>,
+    pub pos: [Position; 2],
     pub literal: Option<String>,
-    pub src: Option<String>,
+    pub src: String,
+}
+
+impl Codegen for Token {
+    fn to_code(&self) -> String {
+        self.src.clone()
+    }
 }
 
 impl PartialEq for Token {
@@ -16,27 +23,32 @@ impl PartialEq for Token {
 }
 
 impl Token {
-    pub fn new(
-        tt: TokenType,
-        pos: Option<[Position; 2]>,
-        src: Option<&str>,
-        literal: Option<&str>,
-    ) -> Self {
+    pub fn new(tt: TokenType, pos: [Position; 2], src: &str, literal: Option<&str>) -> Self {
         Token {
             tt: tt,
             pos: pos,
-            src: src.map(String::from),
+            src: String::from(src),
             literal: literal.map(String::from),
         }
         .into_reserve()
     }
 
     pub fn new_lit(tt: TokenType, s: &str) -> Self {
-        Self::new(tt, None, None, Some(s))
+        match tt {
+            TokenType::String => Self::new(tt, Default::default(), &format!("\"{}\"", s), Some(s)),
+            TokenType::Decimal => Self::new(tt, Default::default(), s, Some(s)),
+            TokenType::Template => Self::new(tt, Default::default(), &format!("`{}`", s), Some(s)),
+            _ => panic!("{:?} is not supported", tt),
+        }
     }
 
     pub fn from_str(s: &str) -> Result<Self, Error> {
-        Ok(Self::new(TokenType::from_str(s)?, None, None, None))
+        Ok(Self::new(
+            TokenType::from_str(s)?,
+            Default::default(),
+            s,
+            None,
+        ))
     }
 
     pub fn from_vec(vec: Vec<&str>) -> Result<Vec<Self>, Error> {
@@ -57,7 +69,7 @@ impl Token {
     // Turn into reserve type
     fn into_reserve(mut self) -> Self {
         match self.tt {
-            TokenType::Identifier => match TokenType::from_str(self.src.as_ref().unwrap()) {
+            TokenType::Identifier => match TokenType::from_str(&self.src) {
                 Ok(tt) => {
                     self.tt = tt;
                     self
@@ -90,6 +102,7 @@ pub enum TokenType {
     Return,
     While,
     Const,
+    Let,
     Finally,
     Super,
     With,
@@ -204,6 +217,7 @@ impl TokenType {
             "return" => Ok(TokenType::Return),
             "while" => Ok(TokenType::While),
             "const" => Ok(TokenType::Const),
+            "let" => Ok(TokenType::Let),
             "finally" => Ok(TokenType::Finally),
             "super" => Ok(TokenType::Super),
             "with" => Ok(TokenType::With),

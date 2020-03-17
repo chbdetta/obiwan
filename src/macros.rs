@@ -1,5 +1,14 @@
 macro_rules! pos {
     ($row:expr, $col:expr) => {
-        Position::new($row, $col)
+        crate::pos::Position::new($row, $col)
+    };
+}
+
+macro_rules! token {
+    ($name:literal) => {
+        crate::token::Token::from_str($name).unwrap()
+    };
+    ($name:ident) => {
+        crate::token::Token::from_str($name).unwrap()
     };
 }
