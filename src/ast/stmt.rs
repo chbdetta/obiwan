@@ -44,7 +44,7 @@ pub struct Expr(pub EExpr);
 pub struct If {
     pub cond: EExpr,
     pub body: Box<Stmt>,
-    pub elses: Vec<Box<Stmt>>,
+    pub body_else: Option<Box<Stmt>>,
 }
 #[derive(Debug, Clone)]
 pub struct While(pub EExpr, pub Box<Stmt>);
@@ -87,41 +87,45 @@ pub struct GeneratorDeclr;
 
 impl Codegen for Block {
     fn to_code(&self) -> String {
-        format!("{{{}}}", self.stmts.to_code(),)
+        format!("{{\n{}\n}}", self.stmts.to_code(),)
     }
 }
 
 impl Codegen for Var {
     fn to_code(&self) -> String {
-        format!("var {}", self.0.to_code())
+        format!("var {};", self.0.to_code())
     }
 }
 
 impl Codegen for LexicalDeclr {
     fn to_code(&self) -> String {
-        format!("{} {}", self.0.src, self.1.to_code())
+        format!("{} {};", self.0.src, self.1.to_code())
     }
 }
 
 impl Codegen for Empty {
     fn to_code(&self) -> String {
-        format!("")
+        format!(";")
     }
 }
 
 impl Codegen for Expr {
     fn to_code(&self) -> String {
-        format!("{}", self.0.to_code())
+        format!("{};", self.0.to_code())
     }
 }
 
 impl Codegen for If {
     fn to_code(&self) -> String {
         format!(
-            "if({}) {} else {}",
+            "if({}) {}{}",
             self.cond.to_code(),
             self.body.to_code(),
-            self.elses.to_code()
+            if let Some(b) = &self.body_else {
+                format!(" else {}", b.to_code())
+            } else {
+                format!("")
+            }
         )
     }
 }
@@ -171,19 +175,19 @@ impl Codegen for Switch {
 
 impl Codegen for Continue {
     fn to_code(&self) -> String {
-        String::from(format!("continue {}", self.0.to_code()).trim())
+        String::from(format!("continue {};", self.0.to_code()).trim())
     }
 }
 
 impl Codegen for Break {
     fn to_code(&self) -> String {
-        String::from(format!("break {}", self.0.to_code()).trim())
+        String::from(format!("break {};", self.0.to_code()).trim())
     }
 }
 
 impl Codegen for Return {
     fn to_code(&self) -> String {
-        String::from(format!("return {}", self.0.to_code()).trim())
+        String::from(format!("return {};", self.0.to_code()).trim())
     }
 }
 
@@ -213,7 +217,7 @@ impl Codegen for Try {
 
 impl Codegen for Debugger {
     fn to_code(&self) -> String {
-        format!("debugger")
+        format!("debugger;")
     }
 }
 

@@ -244,30 +244,33 @@ fn stmt_list(input: Input) -> ParseResult<Vec<Stmt>> {
 }
 
 fn stmt(input: Input) -> ParseResult<Stmt> {
-    map_res(
-        terminated(opt(alt((stmt_expr, stmt_block))), t(";")),
-        |s| -> Result<_, ()> {
-            match s {
-                Some(s) => Ok(s),
-                None => Ok(Stmt::Empty(stmt::Empty)),
-            }
-        },
-    )(input)
+    alt((stmt_expr, stmt_empty, stmt_if, stmt_debugger, stmt_block))(input)
+}
+
+fn stmt_empty(input: Input) -> ParseResult<Stmt> {
+    map_res(t(";"), |_| -> Result<_, ()> {
+        Ok(Stmt::Empty(stmt::Empty))
+    })(input)
 }
 
 fn stmt_expr(input: Input) -> ParseResult<Stmt> {
-    map_res(expr, |e| -> Result<_, ()> { Ok(Stmt::Expr(stmt::Expr(e))) })(input)
+    map_res(terminated(expr, t(";")), |e| -> Result<_, ()> {
+        Ok(Stmt::Expr(stmt::Expr(e)))
+    })(input)
 }
 
 fn declr(input: Input) -> ParseResult<Stmt> {
     map_res(
-        pair(
-            tuple((
-                alt((t("let"), t("const"), t("var"))),
-                tt(TokenType::Identifier),
-                t("="),
-            )),
-            expr,
+        terminated(
+            pair(
+                tuple((
+                    alt((t("let"), t("const"), t("var"))),
+                    tt(TokenType::Identifier),
+                    t("="),
+                )),
+                expr,
+            ),
+            t(";"),
         ),
         |((quantifier, name, _), e)| match &quantifier.src[..] {
             "let" => Ok(Stmt::LexicalDeclr(stmt::LexicalDeclr(
@@ -298,14 +301,14 @@ fn declr(input: Input) -> ParseResult<Stmt> {
 fn stmt_if(input: Input) -> ParseResult<Stmt> {
     map_res(
         pair(
-            preceded(t("if"), delimited(t("("), expr, t(")"))),
-            pair(stmt, many0(preceded(t("else"), stmt))),
+            pair(preceded(t("if"), delimited(t("("), expr, t(")"))), stmt),
+            opt(preceded(t("else"), stmt)),
         ),
-        |(e, (b, s))| -> Result<_, ()> {
+        |((e, b), s)| -> Result<_, ()> {
             Ok(Stmt::If(stmt::If {
                 cond: e,
                 body: Box::new(b),
-                elses: s.iter().cloned().map(Box::new).collect(),
+                body_else: s.map(Box::new),
             }))
         },
     )(input)
@@ -356,7 +359,9 @@ fn stmt_try(input: Input) -> ParseResult<Stmt> {
 }
 
 fn stmt_debugger(input: Input) -> ParseResult<Stmt> {
-    unimplemented!()
+    map_res(terminated(t("debugger"), t(";")), |_| -> Result<_, ()> {
+        Ok(Stmt::Debugger(stmt::Debugger))
+    })(input)
 }
 
 fn stmt_class(input: Input) -> ParseResult<Stmt> {
