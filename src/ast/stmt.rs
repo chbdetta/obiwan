@@ -1,6 +1,7 @@
 use super::binding::{Lexical as LexicalBind, SingleNameBinding, Var as VarBind};
 use super::expr::Expr as EExpr;
 use crate::codegen::Codegen;
+use crate::eval::Eval;
 use crate::token::Token;
 
 #[derive(Debug, Clone, Codegen)]
@@ -223,7 +224,7 @@ impl Codegen for While {
 
 impl Codegen for DoWhile {
     fn to_code(&self) -> String {
-        format!("do {} while({})", self.cond.to_code(), self.body.to_code())
+        format!("do {} while({})", self.body.to_code(), self.cond.to_code())
     }
 }
 
@@ -337,3 +338,27 @@ impl Codegen for StmtList {
             .join("\n")
     }
 }
+
+// Evaluate
+impl Eval<()> for Stmt {}
+impl Eval<()> for Block {}
+impl Eval<()> for Empty {}
+impl Eval<()> for Expr {}
+impl Eval<()> for If {}
+impl Eval<()> for While {}
+impl Eval<()> for DoWhile {}
+impl Eval<()> for For {}
+impl Eval<()> for Switch {}
+impl Eval<()> for Continue {}
+impl Eval<()> for Break {}
+impl Eval<()> for Return {}
+impl Eval<()> for With {}
+impl Eval<()> for Labeled {}
+impl Eval<()> for Throw {}
+impl Eval<()> for Try {}
+impl Eval<()> for Debugger {}
+impl Eval<()> for Var {}
+impl Eval<()> for ClassDeclr {}
+impl Eval<()> for FunctionDeclr {}
+impl Eval<()> for GeneratorDeclr {}
+impl Eval<()> for LexicalDeclr {}

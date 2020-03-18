@@ -1,4 +1,5 @@
 use crate::codegen::Codegen;
+use crate::eval::{Eval, Value};
 use crate::token::Token;
 
 mod args;
@@ -404,3 +405,49 @@ impl Codegen for Call {
         format!("{}({})", self.callee.to_code(), self.arguments.to_code())
     }
 }
+
+// Evaluate
+impl Eval<Value> for Expr {}
+impl Eval<Value> for Assign {}
+impl Eval<Value> for AddAssign {}
+impl Eval<Value> for SubAssign {}
+impl Eval<Value> for MulAssign {}
+impl Eval<Value> for DivAssign {}
+impl Eval<Value> for ModAssign {}
+impl Eval<Value> for Equal {}
+impl Eval<Value> for StrictEq {}
+impl Eval<Value> for Neq {}
+impl Eval<Value> for StrictNeq {}
+impl Eval<Value> for InstanceOf {}
+impl Eval<Value> for In {}
+impl Eval<Value> for Less {}
+impl Eval<Value> for Greater {}
+impl Eval<Value> for LessEq {}
+impl Eval<Value> for GreaterEq {}
+impl Eval<Value> for Add {}
+impl Eval<Value> for Sub {}
+impl Eval<Value> for Mul {}
+impl Eval<Value> for Div {}
+impl Eval<Value> for Mod {}
+impl Eval<Value> for PreIncr {}
+impl Eval<Value> for PreDecr {}
+impl Eval<Value> for PostIncr {}
+impl Eval<Value> for PostDecr {}
+impl Eval<Value> for Computed {}
+impl Eval<Value> for Member {}
+impl Eval<Value> for Call {}
+impl Eval<Value> for New {}
+impl Eval<Value> for And {}
+impl Eval<Value> for Or {}
+impl Eval<Value> for Cond {}
+impl Eval<Value> for Not {}
+impl Eval<Value> for Neg {}
+impl Eval<Value> for Positive {}
+impl Eval<Value> for Delete {}
+impl Eval<Value> for Void {}
+impl Eval<Value> for Typeof {}
+impl Eval<Value> for Literal {}
+impl Eval<Value> for Template {}
+impl Eval<Value> for Ident {}
+impl Eval<Value> for This {}
+impl Eval<Value> for Super {}

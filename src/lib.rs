@@ -17,44 +17,63 @@ mod token;
 
 use codegen::Codegen;
 use error::Error;
-use eval::Evaluator;
+use eval::{Eval, ObiwanEval};
 use lexer::Lexer;
 use parser::parse;
 
 pub struct Obiwan<'a> {
     lexer: Lexer<'a>,
-    evaluator: Evaluator,
+    evaluator: ObiwanEval,
+}
+
+pub enum Mode {
+    Ast,
+    Token,
+    Eval,
+    Code,
+}
+
+impl Default for Mode {
+    fn default() -> Self {
+        Mode::Eval
+    }
 }
 
 impl<'a> Obiwan<'a> {
     fn new(src: &'a str) -> Self {
         Obiwan {
             lexer: Lexer::new(src),
-            evaluator: Evaluator::new(),
+            evaluator: ObiwanEval::new(),
         }
     }
 
-    fn run(&mut self) -> Result<String, Error> {
+    fn run(&mut self, mode: Mode) -> Result<String, Error> {
         let tokens = self.lexer.parse()?;
 
         let ast = parse(tokens)?;
 
-        println!("{:#?}", ast);
-
-        Ok(format!("{}", ast.to_code()))
+        Ok(match mode {
+            Mode::Ast => format!("{:#?}", ast),
+            Mode::Code => ast.to_code(),
+            Mode::Eval => {
+                ast.eval(&mut self.evaluator);
+                format!("{:#?}", self.evaluator.state)
+            }
+            Mode::Token => format!("{:#?}", tokens),
+        })
     }
 }
 
-pub fn run_file(file_path: &str) {
+pub fn run_file(file_path: &str, mode: Mode) {
     use std::fs;
 
     let src = fs::read_to_string(file_path).expect("Reading file error");
 
-    run_string(&src[..]);
+    run_string(&src[..], mode);
 }
 
-pub fn run_string(src: &str) {
-    match Obiwan::new(src).run() {
+pub fn run_string(src: &str, mode: Mode) {
+    match Obiwan::new(src).run(mode) {
         Ok(s) => {
             println!("Parsed result: \n\n{}\n", s);
         }
