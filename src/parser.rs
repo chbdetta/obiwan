@@ -602,30 +602,34 @@ fn stmt_generator(input: Input) -> ParseResult<Stmt> {
 }
 
 fn declr_lexical(input: Input) -> ParseResult<Stmt> {
-    map_res(
+    map(
         terminated(
             pair(
-                tuple((alt((t("let"), t("const"))), expr_ident, t("="))),
-                expr,
+                pair(
+                    alt((t("let"), t("const"))),
+                    pair(expr_ident, opt(preceded(t("="), expr_assign))),
+                ),
+                many0(preceded(
+                    t(","),
+                    pair(expr_ident, opt(preceded(t("="), expr_assign))),
+                )),
             ),
             t(";"),
         ),
-        |((quantifier, name, _), e)| match &quantifier.src[..] {
-            "let" => Ok(Stmt::LexicalDeclr(stmt::LexicalDeclr(
-                quantifier.clone(),
-                binding::Lexical::Ident(binding::SingleNameBinding {
-                    ident: name,
-                    init: Some(e),
-                }),
-            ))),
-            "const" => Ok(Stmt::LexicalDeclr(stmt::LexicalDeclr(
-                quantifier.clone(),
-                binding::Lexical::Ident(binding::SingleNameBinding {
-                    ident: name,
-                    init: Some(e),
-                }),
-            ))),
-            _ => Err(nom::Err::Error(Error::ParserError)),
+        |((kind, binding), mut bindings)| {
+            bindings.insert(0, binding);
+            let declrs = bindings
+                .into_iter()
+                .map(|(ident, init)| stmt::VariableDeclarator {
+                    ident: ident,
+                    init: init,
+                })
+                .collect();
+
+            Stmt::LexicalDeclr(stmt::LexicalDeclr {
+                kind: kind.clone(),
+                declarations: declrs,
+            })
         },
     )(input)
 }

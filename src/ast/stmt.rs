@@ -37,8 +37,6 @@ pub struct Block {
 #[derive(Debug, Clone)]
 pub struct Var(pub VarBind);
 #[derive(Debug, Clone)]
-pub struct LexicalDeclr(pub Token, pub LexicalBind);
-#[derive(Debug, Clone)]
 pub struct Empty;
 #[derive(Debug, Clone)]
 pub struct Expr(pub EExpr);
@@ -106,6 +104,29 @@ pub struct Debugger;
 pub struct ClassDeclr;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct VariableDeclarator {
+    pub ident: EExpr,
+    pub init: Option<EExpr>,
+}
+
+impl Codegen for VariableDeclarator {
+    fn to_code(&self) -> String {
+        let init = if self.init.is_some() {
+            format!(" = {}", self.init.to_code())
+        } else {
+            format!("")
+        };
+        format!("{}{}", self.ident.to_code(), init)
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct LexicalDeclr {
+    pub kind: Token,
+    pub declarations: Vec<VariableDeclarator>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Parameter {
     binding: SingleNameBinding,
     rest: bool,
@@ -155,7 +176,15 @@ impl Codegen for Var {
 
 impl Codegen for LexicalDeclr {
     fn to_code(&self) -> String {
-        format!("{} {};", self.0.src, self.1.to_code())
+        format!(
+            "{} {};",
+            self.kind.to_code(),
+            self.declarations
+                .iter()
+                .map(|d| d.to_code())
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
     }
 }
 
