@@ -8,27 +8,27 @@ pub fn expr(input: Input) -> ParseResult<Expr> {
 }
 
 macro_rules! bin_op {
-    ($next:ident,[$token:literal,$struct:ident]) => {
+    ($next:ident,[$token:literal,$struct:ident],$input:ident) => {
         map_res(
             pair($next, many0(pair((t($token)), $next))),
-            |(a, bs)| -> Result<_, ()> {
+            |(a, bs)| {
                 let mut ret = a;
 
                 for (op, b) in bs {
                     ret = match &op.src[..] {
                         $token => Expr::$struct(expr::$struct(Box::new(ret), Box::new(b))),
-                        _ => panic!("Token is wrong"),
+                        _ => return Err(nom::Err::Error(($input, nom::error::ErrorKind::Alpha))),
                     }
                 }
 
                 Ok(ret)
             },
-        )
+        )($input)
     };
-    ($next:ident,[$($token:literal,$struct:ident);*]) => {
+    ($next:ident,[$($token:literal,$struct:ident);*],$input:ident) => {
         map_res(
             pair($next, many0(pair(alt(($(t($token)),*)), $next))),
-            |(a, bs)| -> Result<_, ()> {
+            |(a, bs)| {
                 let mut ret = a;
 
                 for (op, b) in bs {
@@ -36,13 +36,13 @@ macro_rules! bin_op {
                         $(
                             $token => Expr::$struct(expr::$struct(Box::new(ret), Box::new(b))),
                         )*
-                        _ => panic!("Token is wrong"),
+                        _ => return Err(nom::Err::Error(($input, nom::error::ErrorKind::Alpha))),
                     }
                 }
 
                 Ok(ret)
             },
-        )
+        )($input)
     };
 }
 
@@ -76,47 +76,53 @@ pub fn expr_assign(input: Input) -> ParseResult<Expr> {
 }
 
 fn expr_cond(input: Input) -> ParseResult<Expr> {
-    map_res(
+    map(
         pair(
             expr_or,
             many0(pair(delimited(t("?"), expr, t(":")), expr_or)),
         ),
-        |(a, bs)| -> Result<_, ()> {
+        |(a, bs)| {
             let mut ret = a;
 
             for (b, c) in bs {
                 ret = Expr::Cond(expr::Cond(Box::new(ret), Box::new(b), Box::new(c)))
             }
 
-            Ok(ret)
+            ret
         },
     )(input)
 }
 
 fn expr_or(input: Input) -> ParseResult<Expr> {
-    bin_op!(expr_and, ["||", Or])(input)
+    bin_op!(expr_and, ["||", Or], input)
 }
 
 fn expr_and(input: Input) -> ParseResult<Expr> {
-    bin_op!(expr_equality, ["&&", And])(input)
+    bin_op!(expr_equality, ["&&", And], input)
 }
 
 fn expr_equality(input: Input) -> ParseResult<Expr> {
-    bin_op!(expr_comparison, ["==", Equal; "!=", Neq; "===", StrictEq; "!==", StrictNeq])(input)
+    bin_op!(expr_comparison, ["==", Equal; "!=", Neq; "===", StrictEq; "!==", StrictNeq], input)
 }
 
 fn expr_comparison(input: Input) -> ParseResult<Expr> {
-    bin_op!(expr_addition, ["<", Less; "<=", LessEq; ">", Greater; ">=", GreaterEq; "in", In; "instanceof", InstanceOf])(
-        input,
+    bin_op!(expr_addition, [
+        "<", Less;
+        "<=", LessEq;
+        ">", Greater;
+        ">=", GreaterEq;
+        "in", In;
+        "instanceof", InstanceOf],
+        input
     )
 }
 
 fn expr_addition(input: Input) -> ParseResult<Expr> {
-    bin_op!(expr_multiplication, ["+", Add; "-", Sub])(input)
+    bin_op!(expr_multiplication, ["+", Add; "-", Sub], input)
 }
 
 fn expr_multiplication(input: Input) -> ParseResult<Expr> {
-    bin_op!(expr_unary, ["*", Mul; "/", Div; "%", Mod])(input)
+    bin_op!(expr_unary, ["*", Mul; "/", Div; "%", Mod], input)
 }
 
 fn expr_unary(input: Input) -> ParseResult<Expr> {

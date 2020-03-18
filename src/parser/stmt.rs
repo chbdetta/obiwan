@@ -24,34 +24,30 @@ pub fn stmt(input: Input) -> ParseResult<Stmt> {
 }
 
 fn stmt_empty(input: Input) -> ParseResult<Stmt> {
-    map_res(t(";"), |_| -> Result<_, ()> { Ok(Stmt::Empty(Empty)) })(input)
+    map(t(";"), |_| Stmt::Empty(Empty))(input)
 }
 
 fn stmt_expr(input: Input) -> ParseResult<Stmt> {
-    map_res(terminated(parse_expr, t(";")), |e| -> Result<_, ()> {
-        Ok(Stmt::Expr(Expr(e)))
-    })(input)
+    map(terminated(parse_expr, t(";")), |e| Stmt::Expr(Expr(e)))(input)
 }
 
 fn stmt_var(input: Input) -> ParseResult<Stmt> {
-    map_res(
+    map(
         terminated(
             pair(preceded(t("var"), expr_ident), preceded(t("="), parse_expr)),
             t(";"),
         ),
-        |(ident, e)| -> Result<_, ()> {
-            Ok(Stmt::Var(Var(binding::Var::Ident(
-                binding::SingleNameBinding {
-                    ident: ident,
-                    init: Some(e),
-                },
-            ))))
+        |(ident, e)| {
+            Stmt::Var(Var(binding::Var::Ident(binding::SingleNameBinding {
+                ident: ident,
+                init: Some(e),
+            })))
         },
     )(input)
 }
 
 fn stmt_if(input: Input) -> ParseResult<Stmt> {
-    map_res(
+    map(
         pair(
             pair(
                 preceded(t("if"), delimited(t("("), parse_expr, t(")"))),
@@ -59,48 +55,48 @@ fn stmt_if(input: Input) -> ParseResult<Stmt> {
             ),
             opt(preceded(t("else"), stmt)),
         ),
-        |((e, b), s)| -> Result<_, ()> {
-            Ok(Stmt::If(If {
+        |((e, b), s)| {
+            Stmt::If(If {
                 cond: e,
                 body: Box::new(b),
                 body_else: s.map(Box::new),
-            }))
+            })
         },
     )(input)
 }
 
 fn stmt_while(input: Input) -> ParseResult<Stmt> {
-    map_res(
+    map(
         pair(
             preceded(t("while"), delimited(t("("), parse_expr, t(")"))),
             stmt,
         ),
-        |(e, b)| -> Result<_, ()> {
-            Ok(Stmt::While(While {
+        |(e, b)| {
+            Stmt::While(While {
                 cond: e,
                 body: Box::new(b),
-            }))
+            })
         },
     )(input)
 }
 
 fn stmt_dowhile(input: Input) -> ParseResult<Stmt> {
-    map_res(
+    map(
         pair(
             preceded(t("do"), stmt),
             preceded(t("while"), delimited(t("("), parse_expr, t(")"))),
         ),
-        |(b, e)| -> Result<_, ()> {
-            Ok(Stmt::DoWhile(DoWhile {
+        |(b, e)| {
+            Stmt::DoWhile(DoWhile {
                 cond: e,
                 body: Box::new(b),
-            }))
+            })
         },
     )(input)
 }
 
 fn stmt_for(input: Input) -> ParseResult<Stmt> {
-    map_res(
+    map(
         pair(
             preceded(
                 t("for"),
@@ -108,13 +104,13 @@ fn stmt_for(input: Input) -> ParseResult<Stmt> {
             ),
             stmt,
         ),
-        |((e1, e2, e3), s)| -> Result<_, ()> {
-            Ok(Stmt::For(For {
+        |((e1, e2, e3), s)| {
+            Stmt::For(For {
                 init: e1,
                 cond: e2,
                 modi: e3,
                 body: Box::new(s),
-            }))
+            })
         },
     )(input)
 }
@@ -124,23 +120,23 @@ fn stmt_switch(input: Input) -> ParseResult<Stmt> {
 }
 
 fn stmt_continue(input: Input) -> ParseResult<Stmt> {
-    map_res(
+    map(
         terminated(preceded(t("continue"), opt(expr_ident)), t(";")),
-        |e| -> Result<_, ()> { Ok(Stmt::Continue(Continue { label: e })) },
+        |e| Stmt::Continue(Continue { label: e }),
     )(input)
 }
 
 fn stmt_break(input: Input) -> ParseResult<Stmt> {
-    map_res(
+    map(
         terminated(preceded(t("break"), opt(expr_ident)), t(";")),
-        |e| -> Result<_, ()> { Ok(Stmt::Break(Break { label: e })) },
+        |e| Stmt::Break(Break { label: e }),
     )(input)
 }
 
 fn stmt_return(input: Input) -> ParseResult<Stmt> {
-    map_res(
+    map(
         terminated(preceded(t("return"), opt(parse_expr)), t(";")),
-        |e| -> Result<_, ()> { Ok(Stmt::Return(Return { value: e })) },
+        |e| Stmt::Return(Return { value: e }),
     )(input)
 }
 
@@ -161,8 +157,8 @@ fn stmt_try(input: Input) -> ParseResult<Stmt> {
 }
 
 fn stmt_debugger(input: Input) -> ParseResult<Stmt> {
-    map_res(terminated(t("debugger"), t(";")), |_| -> Result<_, ()> {
-        Ok(Stmt::Debugger(Debugger))
+    map(terminated(t("debugger"), t(";")), |_| {
+        Stmt::Debugger(Debugger)
     })(input)
 }
 
@@ -212,8 +208,7 @@ fn declr_lexical(input: Input) -> ParseResult<Stmt> {
 }
 
 fn stmt_block(input: Input) -> ParseResult<Stmt> {
-    map_res(
-        delimited(t("{"), stmt_list, t("}")),
-        |list| -> Result<_, ()> { Ok(Stmt::Block(Block { stmts: list })) },
-    )(input)
+    map(delimited(t("{"), stmt_list, t("}")), |list| {
+        Stmt::Block(Block { stmts: list })
+    })(input)
 }
