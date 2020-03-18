@@ -1,4 +1,4 @@
-use super::binding::{Lexical as LexicalBind, SingleNameBinding, Var as VarBind};
+use super::binding::{SingleNameBinding, Var as VarBind};
 use super::expr::Expr as EExpr;
 use crate::codegen::Codegen;
 use crate::eval::Eval;

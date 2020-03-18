@@ -1,6 +1,3 @@
-use crate::ast::*;
-use crate::token::Token;
-
 pub trait Codegen {
     fn to_code(&self) -> String;
 }

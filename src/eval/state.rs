@@ -1,4 +1,4 @@
-use super::val::{Number, Undefined, Value};
+use super::val::{Undefined, Value};
 use crate::ast::expr::Ident;
 use std::{
     collections::HashMap,

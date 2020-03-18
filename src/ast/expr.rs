@@ -4,7 +4,7 @@ use crate::token::Token;
 
 mod precedence;
 
-use super::args::{Argument, Arguments};
+use super::args::Arguments;
 pub use precedence::Precedence;
 
 #[derive(Debug, Clone, PartialEq, Eq, Codegen, Precedence)]

@@ -1,6 +1,5 @@
 use super::expr::Expr;
 use crate::codegen::Codegen;
-use crate::token::Token;
 
 #[derive(Debug, Clone, Eq, PartialEq, Codegen)]
 pub enum Lexical {

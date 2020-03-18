@@ -1,6 +1,6 @@
-use super::expr::{expr as parse_expr, expr_assign, expr_ident, expr_identname};
+use super::expr::{expr as parse_expr, expr_assign, expr_ident};
 use super::util::*;
-use crate::ast::{binding, expr, stmt, stmt::*};
+use crate::ast::{binding, stmt::*};
 
 pub fn stmt_list(input: Input) -> ParseResult<Vec<Stmt>> {
     many0(alt((stmt, declr_lexical)))(input)

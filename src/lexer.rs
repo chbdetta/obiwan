@@ -1,5 +1,5 @@
 use crate::error::Error;
-use crate::pos::{Position, Range};
+use crate::pos::Range;
 use crate::token::{Token, TokenType};
 use std::str;
 

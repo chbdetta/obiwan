@@ -118,7 +118,7 @@ impl Evaluator<stmt::Expr> for ObiwanEval {
 impl Evaluator<If> for ObiwanEval {
     type Output = ();
     fn eval(&mut self, ast: &If) -> Self::Output {
-        if (ast.cond.eval(self).into()) {
+        if ast.cond.eval(self).into() {
             ast.body.eval(self);
         } else if let Some(b) = &ast.body_else {
             b.eval(self);
@@ -129,7 +129,7 @@ impl Evaluator<If> for ObiwanEval {
 impl Evaluator<While> for ObiwanEval {
     type Output = ();
     fn eval(&mut self, ast: &While) -> Self::Output {
-        while (ast.cond.eval(self).into()) {
+        while ast.cond.eval(self).into() {
             ast.body.eval(self);
         }
     }
@@ -140,7 +140,7 @@ impl Evaluator<DoWhile> for ObiwanEval {
     fn eval(&mut self, ast: &DoWhile) -> Self::Output {
         ast.body.eval(self);
 
-        while (ast.cond.eval(self).into()) {
+        while ast.cond.eval(self).into() {
             ast.body.eval(self);
         }
     }
