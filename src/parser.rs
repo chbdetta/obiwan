@@ -1,4 +1,5 @@
 use crate::ast::{binding, expr, stmt, Argument, Arguments, Expr, Program, Stmt};
+use crate::codegen::Codegen;
 use crate::error::Error;
 use crate::pos::Position;
 use crate::token::{Token, TokenType};
@@ -33,7 +34,7 @@ pub fn parse(tokens: &[Token]) -> Result<Program, Error> {
             } else {
                 Err(Error::ParserError(ParserError {
                     pos: left_input[0].pos,
-                    msg: format!("Unfinished: {:?}", left_input),
+                    msg: format!("Unfinished: \"{}\"", left_input.to_code()),
                 }))
             }
         }

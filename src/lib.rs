@@ -1,3 +1,4 @@
+#![feature(specialization)]
 #![allow(dead_code)]
 
 #[macro_use]
