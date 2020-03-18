@@ -210,7 +210,7 @@ impl TokenType {
             "typeof" => Ok(TokenType::Typeof),
             "case" => Ok(TokenType::Case),
             "else" => Ok(TokenType::Else),
-            "Instanceof" => Ok(TokenType::Instanceof),
+            "instanceof" => Ok(TokenType::Instanceof),
             "var" => Ok(TokenType::Var),
             "catch" => Ok(TokenType::Catch),
             "export" => Ok(TokenType::Export),

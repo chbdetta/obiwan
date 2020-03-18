@@ -193,7 +193,7 @@ fn expr_cond(input: Input) -> ParseResult<Expr> {
 }
 
 fn expr_or(input: Input) -> ParseResult<Expr> {
-    bin_op!(expr_equality, ["||", Or])(input)
+    bin_op!(expr_and, ["||", Or])(input)
 }
 
 fn expr_and(input: Input) -> ParseResult<Expr> {
@@ -201,7 +201,7 @@ fn expr_and(input: Input) -> ParseResult<Expr> {
 }
 
 fn expr_equality(input: Input) -> ParseResult<Expr> {
-    bin_op!(expr_addition, ["==", Equal; "!=", Neq; "===", StrictEq; "!==", StrictNeq])(input)
+    bin_op!(expr_comparison, ["==", Equal; "!=", Neq; "===", StrictEq; "!==", StrictNeq])(input)
 }
 
 fn expr_comparison(input: Input) -> ParseResult<Expr> {
@@ -453,8 +453,6 @@ fn stmt_list(input: Input) -> ParseResult<Vec<Stmt>> {
 
 fn stmt(input: Input) -> ParseResult<Stmt> {
     alt((
-        stmt_expr,
-        stmt_empty,
         stmt_if,
         stmt_while,
         stmt_dowhile,
@@ -465,6 +463,8 @@ fn stmt(input: Input) -> ParseResult<Stmt> {
         stmt_var,
         stmt_debugger,
         stmt_block,
+        stmt_expr,
+        stmt_empty,
     ))(input)
 }
 
