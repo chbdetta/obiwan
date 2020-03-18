@@ -2,10 +2,9 @@ use crate::codegen::Codegen;
 use crate::eval::{Eval, Value};
 use crate::token::Token;
 
-mod args;
 mod precedence;
 
-pub use args::{Argument, Arguments};
+use super::args::{Argument, Arguments};
 pub use precedence::Precedence;
 
 #[derive(Debug, Clone, PartialEq, Eq, Codegen, Precedence)]
