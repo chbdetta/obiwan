@@ -33,7 +33,7 @@ pub fn parse(tokens: &[Token]) -> Result<Program, Error> {
             } else {
                 Err(Error::ParserError(ParserError {
                     pos: left_input[0].pos,
-                    msg: format!("Unfinished: {:?} \n {:?}", left_input, statements),
+                    msg: format!("Unfinished: {:?}", left_input),
                 }))
             }
         }
@@ -221,15 +221,44 @@ fn expr_multiplication(input: Input) -> ParseResult<Expr> {
 fn expr_unary(input: Input) -> ParseResult<Expr> {
     alt((
         map_res(
-            pair(alt((t("!"), t("-"))), expr_unary),
+            pair(
+                alt((
+                    t("!"),
+                    t("-"),
+                    t("+"),
+                    t("typeof"),
+                    t("delete"),
+                    t("void"),
+                    t("++"),
+                    t("--"),
+                )),
+                expr_unary,
+            ),
             |(op, e)| match &op.src[..] {
                 "!" => Ok(Expr::Not(expr::Not(Box::new(e)))),
                 "-" => Ok(Expr::Neg(expr::Neg(Box::new(e)))),
+                "+" => Ok(Expr::Positive(expr::Positive(Box::new(e)))),
+                "typeof" => Ok(Expr::Typeof(expr::Typeof(Box::new(e)))),
+                "delete" => Ok(Expr::Delete(expr::Delete(Box::new(e)))),
+                "void" => Ok(Expr::Void(expr::Void(Box::new(e)))),
+                "++" => Ok(Expr::PreIncr(expr::PreIncr(Box::new(e)))),
+                "--" => Ok(Expr::PreDecr(expr::PreDecr(Box::new(e)))),
                 _ => Err(nom::Err::Error(nom::error::ErrorKind::Alpha)),
             },
         ),
-        expr_left_hand_side,
+        expr_update,
     ))(input)
+}
+
+fn expr_update(input: Input) -> ParseResult<Expr> {
+    map(
+        pair(expr_left_hand_side, opt(alt((t("++"), t("--"))))),
+        |(l, op)| match op.map(|o| &o.src[..]) {
+            Some("++") => Expr::PostIncr(expr::PostIncr(Box::new(l))),
+            Some("--") => Expr::PostDecr(expr::PostDecr(Box::new(l))),
+            _ => l,
+        },
+    )(input)
 }
 
 fn expr_left_hand_side(input: Input) -> ParseResult<Expr> {

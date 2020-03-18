@@ -86,6 +86,14 @@ pub enum Expr {
     Not(Not),
     #[precedence(17)]
     Neg(Neg),
+    #[precedence(17)]
+    Positive(Positive),
+    #[precedence(17)]
+    Delete(Delete),
+    #[precedence(17)]
+    Void(Void),
+    #[precedence(17)]
+    Typeof(Typeof),
 
     // primary values
     // literals
@@ -211,6 +219,10 @@ unary_op!(New);
 
 unary_op!(Not);
 unary_op!(Neg);
+unary_op!(Positive);
+unary_op!(Typeof);
+unary_op!(Delete);
+unary_op!(Void);
 
 unary_op!(PostDecr);
 unary_op!(PreDecr);
@@ -305,6 +317,27 @@ impl Codegen for Member {
     }
 }
 
+impl Codegen for Typeof {
+    fn to_code(&self) -> String {
+        let child = parens(self, &self.0);
+        format!("typeof {}", child)
+    }
+}
+
+impl Codegen for Delete {
+    fn to_code(&self) -> String {
+        let child = parens(self, &self.0);
+        format!("delete {}", child)
+    }
+}
+
+impl Codegen for Void {
+    fn to_code(&self) -> String {
+        let child = parens(self, &self.0);
+        format!("void {}", child)
+    }
+}
+
 impl Codegen for Not {
     fn to_code(&self) -> String {
         let child = parens(self, &self.0);
@@ -316,6 +349,13 @@ impl Codegen for Neg {
     fn to_code(&self) -> String {
         let child = parens(self, &self.0);
         format!("-{}", child)
+    }
+}
+
+impl Codegen for Positive {
+    fn to_code(&self) -> String {
+        let child = parens(self, &self.0);
+        format!("+{}", child)
     }
 }
 
