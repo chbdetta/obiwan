@@ -39,6 +39,8 @@ impl<'a> Obiwan<'a> {
 
         let ast = parse(tokens)?;
 
+        println!("{:#?}", ast);
+
         Ok(format!("{}", ast.to_code()))
     }
 }
@@ -56,6 +58,6 @@ pub fn run_string(src: &str) {
         Ok(s) => {
             println!("Parsed result: \n\n{}\n", s);
         }
-        Err(err) => eprint!("{:?}\n", err),
+        Err(err) => eprint!("{:#?}\n", err),
     }
 }

@@ -2,7 +2,7 @@ pub mod binding;
 pub mod expr;
 pub mod stmt;
 
-pub use expr::{Expr, Op};
+pub use expr::{Argument, Arguments, Expr};
 pub use stmt::Stmt;
 
 use crate::codegen::Codegen;

@@ -2,38 +2,42 @@ use super::expr::Expr;
 use crate::codegen::Codegen;
 use crate::token::Token;
 
-#[derive(Debug, Clone, Codegen)]
+#[derive(Debug, Clone, Eq, PartialEq, Codegen)]
 pub enum Lexical {
-    Ident(SingleName),
+    Ident(SingleNameBinding),
 }
 
-#[derive(Debug, Clone, Codegen)]
+#[derive(Debug, Clone, Eq, PartialEq, Codegen)]
 pub enum Var {
-    Ident(SingleName),
+    Ident(SingleNameBinding),
 }
 
-#[derive(Debug, Clone)]
-pub struct SingleName {
-    pub ident: Token,
-    // This should be AssignmentExpression
-    pub init: Expr,
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct SingleNameBinding {
+    pub ident: Expr,
+    pub init: Option<Expr>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Pattern {
     ObjectPat(ObjectPat),
     ArrayPat(ArrayPat),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ArrayPat {}
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ObjectPat;
 
-impl Codegen for SingleName {
+impl Codegen for SingleNameBinding {
     fn to_code(&self) -> String {
-        format!("{} = {}", self.ident.to_code(), self.init.to_code())
+        let init = if let Some(e) = &self.init {
+            format!(" = {}", e.to_code())
+        } else {
+            format!("")
+        };
+        format!("{}{}", self.ident.to_code(), init)
     }
 }
 

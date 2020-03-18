@@ -1,36 +1,15 @@
 use crate::codegen::Codegen;
 use crate::token::Token;
 
+mod args;
 mod precedence;
 
-use precedence::Precedence;
+pub use args::{Argument, Arguments};
+pub use precedence::Precedence;
 
 #[derive(Debug, Clone, PartialEq, Eq, Codegen, Precedence)]
 pub enum Expr {
-    Op(Op),
-    // primary values
-    // literals
-    #[precedence(21)]
-    True(True),
-    #[precedence(21)]
-    False(False),
-    #[precedence(21)]
-    Null(Null),
-    #[precedence(21)]
-    Number(Number),
-    #[precedence(21)]
-    Str(Str),
-    #[precedence(21)]
-    Template(Template),
-    // identifier
-    #[precedence(21)]
-    This(This),
-    #[precedence(21)]
-    Identifier(Identifier),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Codegen, Precedence)]
-pub enum Op {
+    // Operators
     #[precedence(3)]
     Assign(Assign),
     #[precedence(3)]
@@ -77,6 +56,25 @@ pub enum Op {
     #[precedence(15)]
     Mod(Mod),
 
+    #[precedence(17)]
+    PreIncr(PreIncr),
+    #[precedence(17)]
+    PreDecr(PreDecr),
+
+    #[precedence(18)]
+    PostIncr(PostIncr),
+    #[precedence(18)]
+    PostDecr(PostDecr),
+
+    #[precedence(20)]
+    Computed(Computed),
+    #[precedence(20)]
+    Member(Member),
+    #[precedence(20)]
+    Call(Call),
+    #[precedence(20)]
+    New(New),
+
     #[precedence(6)]
     And(And),
     #[precedence(5)]
@@ -88,7 +86,84 @@ pub enum Op {
     Not(Not),
     #[precedence(17)]
     Neg(Neg),
+
+    // primary values
+    // literals
+    #[precedence(22)]
+    Literal(Literal),
+
+    #[precedence(22)]
+    Template(Template),
+
+    #[precedence(22)]
+    Ident(Ident),
+
+    #[precedence(22)]
+    This(This),
+
+    #[precedence(22)]
+    Super(Super),
 }
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LiteralValue {
+    String(String),
+    Number(i32),
+    Boolean(bool),
+    Null,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Literal {
+    pub token: Token,
+    pub value: LiteralValue,
+}
+
+impl Codegen for Literal {
+    fn to_code(&self) -> String {
+        format!("{}", self.token.to_code())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Template(pub String, pub Vec<Box<Expr>>);
+
+impl Codegen for Template {
+    fn to_code(&self) -> String {
+        format!("`{}`", self.0)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Ident {
+    pub name: Token,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct This;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Super;
+
+impl Codegen for This {
+    fn to_code(&self) -> String {
+        format!("this")
+    }
+}
+
+impl Codegen for Super {
+    fn to_code(&self) -> String {
+        format!("super")
+    }
+}
+
+impl Codegen for Ident {
+    fn to_code(&self) -> String {
+        format!("{}", self.name.to_code())
+    }
+}
+
+// Operators
 
 macro_rules! binary_op {
     ($name:ident) => {
@@ -120,6 +195,8 @@ binary_op!(Mul);
 binary_op!(Div);
 binary_op!(Mod);
 
+binary_op!(Computed);
+
 binary_op!(Assign);
 binary_op!(AddAssign);
 binary_op!(SubAssign);
@@ -130,35 +207,36 @@ binary_op!(ModAssign);
 binary_op!(And);
 binary_op!(Or);
 
+unary_op!(New);
+
 unary_op!(Not);
 unary_op!(Neg);
+
+unary_op!(PostDecr);
+unary_op!(PreDecr);
+unary_op!(PostIncr);
+unary_op!(PreIncr);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Cond(pub Box<Expr>, pub Box<Expr>, pub Box<Expr>);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Number(pub i32);
+pub struct Call {
+    pub callee: Box<Expr>,
+    pub arguments: Arguments,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Str(pub String);
+pub struct Member {
+    pub object: Box<Expr>,
+    pub property: Box<Expr>,
+    pub computed: bool,
+}
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Null;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct True;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct False;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Template(pub String, pub Vec<Box<Expr>>);
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Identifier(pub Token);
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct This;
+/**
+ * Code generation definitions
+ *
+ */
 
 fn parens<A: Precedence, B: Precedence + Codegen>(a: &A, b: &B) -> String {
     if a.precedence() > b.precedence() {
@@ -215,6 +293,18 @@ impl Codegen for Cond {
     }
 }
 
+impl Codegen for Member {
+    fn to_code(&self) -> String {
+        let property = if self.computed {
+            format!("[{}]", self.property.to_code())
+        } else {
+            format!(".{}", self.property.to_code())
+        };
+
+        format!("{}{}", self.object.to_code(), property)
+    }
+}
+
 impl Codegen for Not {
     fn to_code(&self) -> String {
         let child = parens(self, &self.0);
@@ -229,50 +319,48 @@ impl Codegen for Neg {
     }
 }
 
-impl Codegen for True {
+impl Codegen for PostDecr {
     fn to_code(&self) -> String {
-        format!("true")
+        let child = parens(self, &self.0);
+        format!("{}--", child)
     }
 }
 
-impl Codegen for False {
+impl Codegen for PostIncr {
     fn to_code(&self) -> String {
-        format!("false")
+        let child = parens(self, &self.0);
+        format!("{}++", child)
     }
 }
 
-impl Codegen for Null {
+impl Codegen for PreDecr {
     fn to_code(&self) -> String {
-        format!("null")
+        let child = parens(self, &self.0);
+        format!("--{}", child)
     }
 }
 
-impl Codegen for Number {
+impl Codegen for PreIncr {
     fn to_code(&self) -> String {
-        format!("{}", self.0)
+        let child = parens(self, &self.0);
+        format!("++{}", child)
     }
 }
 
-impl Codegen for Str {
+impl Codegen for Computed {
     fn to_code(&self) -> String {
-        format!("\"{}\"", self.0)
+        format!("{}[{}]", self.0.to_code(), self.1.to_code())
     }
 }
 
-impl Codegen for Template {
+impl Codegen for New {
     fn to_code(&self) -> String {
-        format!("`{}`", self.0)
+        format!("new {}", self.0.to_code())
     }
 }
 
-impl Codegen for This {
+impl Codegen for Call {
     fn to_code(&self) -> String {
-        format!("this")
-    }
-}
-
-impl Codegen for Identifier {
-    fn to_code(&self) -> String {
-        format!("{}", self.0.src)
+        format!("{}({})", self.callee.to_code(), self.arguments.to_code())
     }
 }

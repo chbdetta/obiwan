@@ -79,6 +79,10 @@ impl Token {
             _ => self,
         }
     }
+
+    pub fn is_reserve(&self) -> bool {
+        TokenType::from_str(&self.src).is_ok()
+    }
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]

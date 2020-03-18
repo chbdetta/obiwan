@@ -11,18 +11,6 @@ impl<T: Codegen> Codegen for Box<T> {
     }
 }
 
-impl<T> Codegen for Vec<T>
-where
-    T: Codegen,
-{
-    fn to_code(&self) -> String {
-        self.iter()
-            .map(|s| s.to_code())
-            .collect::<Vec<String>>()
-            .join("\n")
-    }
-}
-
 impl<T> Codegen for Option<T>
 where
     T: Codegen,

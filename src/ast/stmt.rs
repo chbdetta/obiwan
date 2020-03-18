@@ -1,4 +1,4 @@
-use super::binding::{Lexical as LexicalBind, SingleName, Var as VarBind};
+use super::binding::{Lexical as LexicalBind, SingleNameBinding, Var as VarBind};
 use super::expr::Expr as EExpr;
 use crate::codegen::Codegen;
 use crate::token::Token;
@@ -28,9 +28,11 @@ pub enum Stmt {
     LexicalDeclr(LexicalDeclr),
 }
 
+type StmtList = Vec<Stmt>;
+
 #[derive(Debug, Clone)]
 pub struct Block {
-    pub stmts: Vec<Stmt>,
+    pub stmts: StmtList,
 }
 #[derive(Debug, Clone)]
 pub struct Var(pub VarBind);
@@ -46,24 +48,49 @@ pub struct If {
     pub body: Box<Stmt>,
     pub body_else: Option<Box<Stmt>>,
 }
+
 #[derive(Debug, Clone)]
-pub struct While(pub EExpr, pub Box<Stmt>);
+pub struct While {
+    pub cond: EExpr,
+    pub body: Box<Stmt>,
+}
+
 #[derive(Debug, Clone)]
-pub struct DoWhile(pub EExpr, pub Box<Stmt>);
+pub struct DoWhile {
+    pub cond: EExpr,
+    pub body: Box<Stmt>,
+}
+
 #[derive(Debug, Clone)]
-pub struct For(pub EExpr, pub EExpr, pub EExpr, pub Box<Stmt>);
+pub struct For {
+    pub init: EExpr,
+    pub cond: EExpr,
+    pub modi: EExpr,
+    pub body: Box<Stmt>,
+}
+
 #[derive(Debug, Clone)]
-pub struct Switch(
-    pub EExpr,
-    pub Vec<(EExpr, Box<Stmt>)>,
-    pub Option<Box<Stmt>>,
-);
+pub struct Switch {
+    pub test: EExpr,
+    pub cases: Vec<(EExpr, Box<Stmt>)>,
+    pub default: Option<Box<Stmt>>,
+}
+
 #[derive(Debug, Clone)]
-pub struct Continue(pub Option<Token>);
+pub struct Continue {
+    pub label: Option<EExpr>,
+}
+
 #[derive(Debug, Clone)]
-pub struct Break(pub Option<Token>);
+pub struct Break {
+    pub label: Option<EExpr>,
+}
+
 #[derive(Debug, Clone)]
-pub struct Return(pub Option<EExpr>);
+pub struct Return {
+    pub value: Option<EExpr>,
+}
+
 #[derive(Debug, Clone)]
 pub struct With(pub EExpr, pub Box<Stmt>);
 #[derive(Debug, Clone)]
@@ -74,13 +101,42 @@ pub struct Throw(pub EExpr);
 pub struct Try;
 #[derive(Debug, Clone)]
 pub struct Debugger;
+
 #[derive(Debug, Clone)]
 pub struct ClassDeclr;
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Parameter {
+    binding: SingleNameBinding,
+    rest: bool,
+}
+
+pub type Parameters = Vec<Parameter>;
+
+impl Codegen for Parameter {
+    fn to_code(&self) -> String {
+        format!(
+            "{}{}",
+            if self.rest { "..." } else { "" },
+            self.binding.to_code()
+        )
+    }
+}
+
+impl Codegen for Parameters {
+    fn to_code(&self) -> String {
+        self.iter()
+            .map(|p| p.to_code())
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct FunctionDeclr {
-    pub ident: Option<Token>,
-    pub parameters: Vec<SingleName>,
-    pub body: Vec<Stmt>,
+    pub name: Option<Token>,
+    pub parameters: Parameters,
+    pub body: StmtList,
 }
 #[derive(Debug, Clone)]
 pub struct GeneratorDeclr;
@@ -132,13 +188,13 @@ impl Codegen for If {
 
 impl Codegen for While {
     fn to_code(&self) -> String {
-        format!("while({}) {}", self.0.to_code(), self.1.to_code())
+        format!("while({}) {}", self.cond.to_code(), self.body.to_code())
     }
 }
 
 impl Codegen for DoWhile {
     fn to_code(&self) -> String {
-        format!("do {} while({})", self.1.to_code(), self.0.to_code())
+        format!("do {} while({})", self.cond.to_code(), self.body.to_code())
     }
 }
 
@@ -146,10 +202,10 @@ impl Codegen for For {
     fn to_code(&self) -> String {
         format!(
             "for({};{};{}) {}",
-            self.0.to_code(),
-            self.1.to_code(),
-            self.2.to_code(),
-            self.3.to_code(),
+            self.init.to_code(),
+            self.cond.to_code(),
+            self.modi.to_code(),
+            self.body.to_code(),
         )
     }
 }
@@ -158,13 +214,13 @@ impl Codegen for Switch {
     fn to_code(&self) -> String {
         format!(
             "switch({}) {{{} {}}}",
-            self.0.to_code(),
-            self.1
+            self.test.to_code(),
+            self.cases
                 .iter()
                 .map(|(e, s)| format!("case {}: {}", e.to_code(), s.to_code()))
                 .collect::<Vec<String>>()
                 .join("\n"),
-            if let Some(s) = &self.2 {
+            if let Some(s) = &self.default {
                 format!("default: {}", s.to_code())
             } else {
                 format!("")
@@ -175,19 +231,19 @@ impl Codegen for Switch {
 
 impl Codegen for Continue {
     fn to_code(&self) -> String {
-        String::from(format!("continue {};", self.0.to_code()).trim())
+        String::from(format!("continue {};", self.label.to_code()).trim())
     }
 }
 
 impl Codegen for Break {
     fn to_code(&self) -> String {
-        String::from(format!("break {};", self.0.to_code()).trim())
+        String::from(format!("break {};", self.label.to_code()).trim())
     }
 }
 
 impl Codegen for Return {
     fn to_code(&self) -> String {
-        String::from(format!("return {};", self.0.to_code()).trim())
+        String::from(format!("return {};", self.value.to_code()).trim())
     }
 }
 
@@ -231,7 +287,7 @@ impl Codegen for FunctionDeclr {
     fn to_code(&self) -> String {
         format!(
             "function {}({}) {{{}}}",
-            self.ident.to_code(),
+            self.name.to_code(),
             self.parameters.to_code(),
             self.body.to_code()
         )
@@ -241,5 +297,14 @@ impl Codegen for FunctionDeclr {
 impl Codegen for GeneratorDeclr {
     fn to_code(&self) -> String {
         unimplemented!()
+    }
+}
+
+impl Codegen for StmtList {
+    fn to_code(&self) -> String {
+        self.iter()
+            .map(|s| s.to_code())
+            .collect::<Vec<String>>()
+            .join("\n")
     }
 }
