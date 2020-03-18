@@ -1,12 +1,12 @@
 use crate::error::Error;
-use crate::pos::Position;
+use crate::pos::{Position, Range};
 use crate::token::{Token, TokenType};
 use std::str;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct LexerError {
     src: String,
-    pos: Position,
+    pos: Range,
     msg: String,
 }
 
@@ -14,8 +14,6 @@ pub struct Lexer<'a> {
     src: &'a [u8],
     start: usize,
     cur: usize,
-    cur_pos: Position,
-    start_pos: Position,
     tokens: Vec<Token>,
     error: Option<Error>,
 }
@@ -56,8 +54,6 @@ impl<'a> Lexer<'a> {
             src: bytes,
             cur: 0,
             start: 0,
-            cur_pos: pos!(0, 0),
-            start_pos: pos!(0, 0),
             tokens: vec![],
             error: None,
         }
@@ -67,12 +63,6 @@ impl<'a> Lexer<'a> {
         let el = self.src.get(self.cur);
 
         if let Some(c) = el {
-            if is_line_feed(c) {
-                self.cur_pos = pos!(self.cur_pos.row + 1, 0);
-            } else {
-                self.cur_pos = self.cur_pos + pos!(0, 1);
-            }
-
             self.cur += 1;
         }
 
@@ -85,7 +75,6 @@ impl<'a> Lexer<'a> {
 
     fn consume(&mut self) {
         self.start = self.cur;
-        self.start_pos = self.cur_pos;
     }
 
     fn is_ended(&self) -> bool {
@@ -133,7 +122,7 @@ impl<'a> Lexer<'a> {
             let src_seg = self.src_seg();
 
             self.tokens
-                .push(Token::new(tt, [self.start_pos, self.cur_pos], src_seg, lit));
+                .push(Token::new(tt, range!(self.start, self.cur), src_seg, lit));
 
             self.consume();
         }
@@ -141,7 +130,7 @@ impl<'a> Lexer<'a> {
 
     fn error(&mut self, msg: &str) {
         self.error = Some(Error::LexerError(LexerError {
-            pos: self.cur_pos.clone(),
+            pos: range!(self.start, self.cur),
             src: String::from(self.src_seg()),
             msg: String::from(msg),
         }));
@@ -534,7 +523,7 @@ mod tests {
         assert_eq!(
             Lexer::new(r#""Hello world!"#).parse(),
             Err(Error::LexerError(LexerError {
-                pos: pos!(0, 13),
+                pos: range!(13, 14),
                 src: String::from("\"Hello world!"),
                 msg: String::from("String is unclosed")
             }))

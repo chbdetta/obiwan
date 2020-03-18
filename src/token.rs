@@ -1,11 +1,11 @@
 use crate::codegen::Codegen;
 use crate::error::Error;
-use crate::pos::Position;
+use crate::pos::Range;
 
 #[derive(Clone, Eq, Debug)]
 pub struct Token {
     pub tt: TokenType,
-    pub pos: [Position; 2],
+    pub pos: Range,
     pub literal: Option<String>,
     pub src: String,
 }
@@ -23,7 +23,7 @@ impl PartialEq for Token {
 }
 
 impl Token {
-    pub fn new(tt: TokenType, pos: [Position; 2], src: &str, literal: Option<&str>) -> Self {
+    pub fn new(tt: TokenType, pos: Range, src: &str, literal: Option<&str>) -> Self {
         Token {
             tt: tt,
             pos: pos,

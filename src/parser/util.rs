@@ -1,5 +1,4 @@
 pub use crate::error::Error;
-pub use crate::pos::Position;
 pub use crate::token::{Token, TokenType};
 pub use nom::{
     branch::alt,

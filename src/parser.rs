@@ -1,6 +1,7 @@
 use crate::ast::Program;
 use crate::codegen::Codegen;
 use crate::error::Error;
+use crate::pos::Range;
 
 mod arg;
 mod expr;
@@ -12,14 +13,14 @@ use util::*;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct ParserError {
-    pos: [Position; 2],
+    pos: Range,
     msg: String,
 }
 
 impl ParserError {
-    fn new(pos: &[Position; 2], msg: &str) -> Self {
+    fn new(pos: Range, msg: &str) -> Self {
         Self {
-            pos: *pos,
+            pos: pos,
             msg: String::from(msg),
         }
     }

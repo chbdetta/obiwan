@@ -1,6 +1,9 @@
-macro_rules! pos {
-    ($row:expr, $col:expr) => {
-        crate::pos::Position::new($row, $col)
+macro_rules! range {
+    ($start:expr,$end:expr) => {
+        crate::pos::Range(
+            crate::pos::Position::new($start),
+            crate::pos::Position::new($end),
+        )
     };
 }
 
