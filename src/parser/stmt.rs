@@ -15,7 +15,6 @@ pub fn stmt(input: Input) -> ParseResult<Stmt> {
         stmt_break,
         stmt_continue,
         stmt_return,
-        stmt_var,
         stmt_debugger,
         stmt_block,
         stmt_expr,
@@ -29,21 +28,6 @@ fn stmt_empty(input: Input) -> ParseResult<Stmt> {
 
 fn stmt_expr(input: Input) -> ParseResult<Stmt> {
     map(terminated(parse_expr, t(";")), |e| Stmt::Expr(Expr(e)))(input)
-}
-
-fn stmt_var(input: Input) -> ParseResult<Stmt> {
-    map(
-        terminated(
-            pair(preceded(t("var"), expr_ident), preceded(t("="), parse_expr)),
-            t(";"),
-        ),
-        |(ident, e)| {
-            Stmt::Var(Var(binding::Var::Ident(binding::SingleNameBinding {
-                ident: ident,
-                init: Some(e),
-            })))
-        },
-    )(input)
 }
 
 fn stmt_if(input: Input) -> ParseResult<Stmt> {
@@ -179,7 +163,7 @@ fn declr_lexical(input: Input) -> ParseResult<Stmt> {
         terminated(
             pair(
                 pair(
-                    alt((t("let"), t("const"))),
+                    alt((t("let"), t("const"), t("var"))),
                     pair(expr_ident, opt(preceded(t("="), expr_assign))),
                 ),
                 many0(preceded(
@@ -200,7 +184,7 @@ fn declr_lexical(input: Input) -> ParseResult<Stmt> {
                 .collect();
 
             Stmt::LexicalDeclr(LexicalDeclr {
-                kind: kind.clone(),
+                kind: kind.into(),
                 declarations: declrs,
             })
         },

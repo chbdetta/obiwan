@@ -85,7 +85,6 @@ impl Evaluator<Stmt> for ObiwanEval {
             Stmt::Throw(a) => a.eval(self),
             Stmt::Try(a) => a.eval(self),
             Stmt::Debugger(a) => a.eval(self),
-            Stmt::Var(a) => a.eval(self),
             Stmt::ClassDeclr(a) => a.eval(self),
             Stmt::FunctionDeclr(a) => a.eval(self),
             Stmt::GeneratorDeclr(a) => a.eval(self),
@@ -212,13 +211,6 @@ impl Evaluator<Try> for ObiwanEval {
 impl Evaluator<Debugger> for ObiwanEval {
     type Output = ();
     fn eval(&mut self, ast: &Debugger) -> Self::Output {
-        unimplemented!();
-    }
-}
-
-impl Evaluator<Var> for ObiwanEval {
-    type Output = ();
-    fn eval(&mut self, ast: &Var) -> Self::Output {
         unimplemented!();
     }
 }

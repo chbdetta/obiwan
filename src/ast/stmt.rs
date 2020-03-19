@@ -1,4 +1,4 @@
-use super::binding::{SingleNameBinding, Var as VarBind};
+use super::binding::SingleNameBinding;
 use super::expr::Expr as EExpr;
 use crate::codegen::Codegen;
 use crate::eval::Eval;
@@ -22,7 +22,6 @@ pub enum Stmt {
     Throw(Throw),
     Try(Try),
     Debugger(Debugger),
-    Var(Var),
     ClassDeclr(ClassDeclr),
     FunctionDeclr(FunctionDeclr),
     GeneratorDeclr(GeneratorDeclr),
@@ -35,8 +34,6 @@ type StmtList = Vec<Stmt>;
 pub struct Block {
     pub stmts: StmtList,
 }
-#[derive(Debug, Clone)]
-pub struct Var(pub VarBind);
 #[derive(Debug, Clone)]
 pub struct Empty;
 #[derive(Debug, Clone)]
@@ -121,9 +118,27 @@ impl Codegen for VariableDeclarator {
     }
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Codegen)]
+pub enum VariableDeclrKind {
+    Let,
+    Const,
+    Var,
+}
+
+impl From<&Token> for VariableDeclrKind {
+    fn from(tk: &Token) -> Self {
+        match &tk.tt {
+            TokenType::Let => VariableDeclrKind::Let,
+            TokenType::Const => VariableDeclrKind::Const,
+            TokenType::Var => VariableDeclrKind::Var,
+            _ => panic!("Impossible to convert tokens except Let, Const and Var"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct LexicalDeclr {
-    pub kind: Token,
+    pub kind: VariableDeclrKind,
     pub declarations: Vec<VariableDeclarator>,
 }
 
@@ -166,12 +181,6 @@ pub struct GeneratorDeclr;
 impl Codegen for Block {
     fn to_code(&self) -> String {
         format!("{{\n{}\n}}", self.stmts.to_code(),)
-    }
-}
-
-impl Codegen for Var {
-    fn to_code(&self) -> String {
-        format!("var {};", self.0.to_code())
     }
 }
 
@@ -357,7 +366,6 @@ impl Eval<()> for Labeled {}
 impl Eval<()> for Throw {}
 impl Eval<()> for Try {}
 impl Eval<()> for Debugger {}
-impl Eval<()> for Var {}
 impl Eval<()> for ClassDeclr {}
 impl Eval<()> for FunctionDeclr {}
 impl Eval<()> for GeneratorDeclr {}
