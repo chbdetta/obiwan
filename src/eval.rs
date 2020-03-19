@@ -4,7 +4,7 @@ pub mod val;
 pub use state::State;
 pub use val::{Number, Value};
 
-use crate::ast::{expr, expr::*, stmt, stmt::*, Program};
+use crate::ast::{expr, expr::*, stmt, stmt::*, ExprOrStmt, Program};
 
 pub trait Evaluator<T> {
     type Output;
@@ -51,16 +51,36 @@ impl ObiwanEval {
     }
 }
 
+impl Evaluator<StmtList> for ObiwanEval {
+    type Output = ();
+    fn eval(&mut self, stmts: &StmtList) -> Self::Output {
+        for stmt in stmts {
+            stmt.eval(self);
+        }
+    }
+}
+
 impl Evaluator<Program> for ObiwanEval {
     type Output = ();
     fn eval(&mut self, ast: &Program) -> Self::Output {
         match ast {
             Program::Script(stmts) => {
-                for stmt in stmts {
-                    stmt.eval(self);
-                }
+                stmts.eval(self);
             }
             _ => unimplemented!(),
+        }
+    }
+                }
+
+impl Evaluator<ExprOrStmt> for ObiwanEval {
+    type Output = ();
+    fn eval(&mut self, ast: &ExprOrStmt) -> Self::Output {
+        match ast {
+            // TODO: we ignore the return value of the expression
+            ExprOrStmt::Expr(a) => {
+                a.eval(self);
+            }
+            ExprOrStmt::Stmt(a) => a.eval(self),
         }
     }
 }

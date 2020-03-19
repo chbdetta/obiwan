@@ -28,7 +28,7 @@ pub enum Stmt {
     LexicalDeclr(LexicalDeclr),
 }
 
-type StmtList = Vec<Stmt>;
+pub type StmtList = Vec<Stmt>;
 
 #[derive(Debug, Clone)]
 pub struct Block {
