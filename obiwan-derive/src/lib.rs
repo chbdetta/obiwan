@@ -1,17 +1,39 @@
 extern crate proc_macro;
 
-use proc_macro::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use quote::quote;
-use syn::{parse_macro_input, Data, DeriveInput, Fields, Ident, LitInt};
+use syn::{parse_macro_input, Data, DeriveInput, Fields, Ident, LitInt, LitStr};
 
 #[proc_macro_derive(Codegen)]
-pub fn codegen(input: TokenStream) -> TokenStream {
+pub fn codegen(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // Construct a string representation of the type definition
     let input = parse_macro_input!(input as DeriveInput);
 
     let name = input.ident;
-    let variants: Vec<Ident> = match input.data {
-        Data::Enum(data) => data.variants.iter().map(|v| v.ident.clone()).collect(),
+    let arms: Vec<_> = match input.data {
+        Data::Enum(data) => data
+            .variants
+            .iter()
+            .map(|v| {
+                let ident = &v.ident;
+                let ident_str = LitStr::new(&ident.to_string().to_lowercase(), Span::call_site());
+                match &v.fields {
+                    Fields::Unit => quote! {
+                        Self::#ident => String::from(#ident_str)
+                    },
+                    Fields::Unnamed(unnamed) => {
+                        if unnamed.unnamed.len() != 1 {
+                            panic!("Codegen requires exactly one struct")
+                        } else {
+                            quote! {
+                                Self::#ident(a) => a.to_code()
+                            }
+                        }
+                    }
+                    _ => panic!("Codegen does not support named variant fields"),
+                }
+            })
+            .collect::<Vec<_>>(),
         _ => panic!("codegen derive only works on Enum"),
     };
     // Parse the string representation
@@ -19,17 +41,17 @@ pub fn codegen(input: TokenStream) -> TokenStream {
         impl Codegen for #name {
             fn to_code(&self) -> String {
                 match self {
-                    #(Self::#variants(a) => a.to_code()),*
+                    #(#arms),*
                 }
             }
         }
     };
 
-    TokenStream::from(expended)
+    TokenStream::from(expended).into()
 }
 
 #[proc_macro_derive(Precedence, attributes(precedence))]
-pub fn precedence(input: TokenStream) -> TokenStream {
+pub fn precedence(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // Construct a string representation of the type definition
     let input = parse_macro_input!(input as DeriveInput);
 
@@ -89,5 +111,5 @@ pub fn precedence(input: TokenStream) -> TokenStream {
         )*
     };
 
-    TokenStream::from(expended)
+    TokenStream::from(expended).into()
 }
