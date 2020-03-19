@@ -10,17 +10,14 @@ pub use stmt::{Stmt, StmtList};
 use crate::codegen::Codegen;
 use crate::eval::Eval;
 
-#[derive(Debug, Codegen)]
+#[derive(Debug, Codegen, Eval)]
 pub enum Program {
     Script(StmtList),
     Module(StmtList),
 }
 
-#[derive(Debug, Codegen)]
+#[derive(Debug, Codegen, Eval)]
 pub enum ExprOrStmt {
     Expr(Expr),
     Stmt(Stmt),
 }
-
-impl Eval<()> for Program {}
-impl Eval<()> for ExprOrStmt {}

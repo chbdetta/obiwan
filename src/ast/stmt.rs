@@ -1,10 +1,10 @@
 use super::binding::SingleNameBinding;
 use super::expr::Expr as EExpr;
 use crate::codegen::Codegen;
-use crate::eval::Eval;
-use crate::token::Token;
+use crate::eval::{Eval, Evaluator, Value};
+use crate::token::{Token, TokenType};
 
-#[derive(Debug, Clone, Codegen)]
+#[derive(Debug, Clone, Codegen, Eq, PartialEq, Eval)]
 pub enum Stmt {
     Block(Block),
     Empty(Empty),
@@ -29,35 +29,43 @@ pub enum Stmt {
 }
 
 pub type StmtList = Vec<Stmt>;
+impl Eval for StmtList {
+    fn eval<U>(&self, evaluator: &mut U) -> Value
+    where
+        U: Evaluator<Self>,
+    {
+        evaluator.eval(self)
+    }
+}
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eval, Eq, PartialEq)]
 pub struct Block {
     pub stmts: StmtList,
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eval, Eq, PartialEq)]
 pub struct Empty;
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eval, Eq, PartialEq)]
 pub struct Expr(pub EExpr);
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eval, Eq, PartialEq)]
 pub struct If {
     pub cond: EExpr,
     pub body: Box<Stmt>,
     pub body_else: Option<Box<Stmt>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eval, Eq, PartialEq)]
 pub struct While {
     pub cond: EExpr,
     pub body: Box<Stmt>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eval, Eq, PartialEq)]
 pub struct DoWhile {
     pub cond: EExpr,
     pub body: Box<Stmt>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eval, Eq, PartialEq)]
 pub struct For {
     pub init: EExpr,
     pub cond: EExpr,
@@ -65,40 +73,40 @@ pub struct For {
     pub body: Box<Stmt>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eval, Eq, PartialEq)]
 pub struct Switch {
     pub test: EExpr,
     pub cases: Vec<(EExpr, Box<Stmt>)>,
     pub default: Option<Box<Stmt>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eval, Eq, PartialEq)]
 pub struct Continue {
     pub label: Option<EExpr>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eval, Eq, PartialEq)]
 pub struct Break {
     pub label: Option<EExpr>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eval, Eq, PartialEq)]
 pub struct Return {
     pub value: Option<EExpr>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eval, Eq, PartialEq)]
 pub struct With(pub EExpr, pub Box<Stmt>);
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eval, Eq, PartialEq)]
 pub struct Labeled(pub Token, pub Box<Stmt>);
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eval, Eq, PartialEq)]
 pub struct Throw(pub EExpr);
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eval, Eq, PartialEq)]
 pub struct Try;
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eval, Eq, PartialEq)]
 pub struct Debugger;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eval, Eq, PartialEq)]
 pub struct ClassDeclr;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -136,7 +144,7 @@ impl From<&Token> for VariableDeclrKind {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Eval)]
 pub struct LexicalDeclr {
     pub kind: VariableDeclrKind,
     pub declarations: Vec<VariableDeclarator>,
@@ -169,13 +177,13 @@ impl Codegen for Parameters {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq, Eval)]
 pub struct FunctionDeclr {
     pub name: Option<Token>,
     pub parameters: Parameters,
     pub body: StmtList,
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq, Eval)]
 pub struct GeneratorDeclr;
 
 impl Codegen for Block {
@@ -347,26 +355,3 @@ impl Codegen for StmtList {
             .join("\n")
     }
 }
-
-// Evaluate
-impl Eval<()> for Stmt {}
-impl Eval<()> for Block {}
-impl Eval<()> for Empty {}
-impl Eval<()> for Expr {}
-impl Eval<()> for If {}
-impl Eval<()> for While {}
-impl Eval<()> for DoWhile {}
-impl Eval<()> for For {}
-impl Eval<()> for Switch {}
-impl Eval<()> for Continue {}
-impl Eval<()> for Break {}
-impl Eval<()> for Return {}
-impl Eval<()> for With {}
-impl Eval<()> for Labeled {}
-impl Eval<()> for Throw {}
-impl Eval<()> for Try {}
-impl Eval<()> for Debugger {}
-impl Eval<()> for ClassDeclr {}
-impl Eval<()> for FunctionDeclr {}
-impl Eval<()> for GeneratorDeclr {}
-impl Eval<()> for LexicalDeclr {}

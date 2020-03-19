@@ -113,3 +113,21 @@ pub fn precedence(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
     TokenStream::from(expended).into()
 }
+
+#[proc_macro_derive(Eval)]
+pub fn eval(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+
+    let name = input.ident;
+    let extended = quote! {
+        impl Eval for #name {
+            fn eval<U>(&self, evaluator: &mut U) -> crate::eval::Value
+            where
+                U: crate::eval::Evaluator<Self> {
+                    evaluator.eval(self)
+                }
+        }
+    };
+
+    extended.into()
+}

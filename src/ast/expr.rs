@@ -1,5 +1,5 @@
 use crate::codegen::Codegen;
-use crate::eval::{Eval, Value};
+use crate::eval::{Eval, Evaluator, Value};
 use crate::token::Token;
 
 mod precedence;
@@ -7,7 +7,7 @@ mod precedence;
 use super::args::Arguments;
 pub use precedence::Precedence;
 
-#[derive(Debug, Clone, PartialEq, Eq, Codegen, Precedence)]
+#[derive(Debug, Clone, PartialEq, Eq, Codegen, Precedence, Eval)]
 pub enum Expr {
     // Operators
     #[precedence(3)]
@@ -121,7 +121,7 @@ pub enum LiteralValue {
     Null,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Eval)]
 pub struct Literal {
     pub token: Token,
     pub value: LiteralValue,
@@ -133,7 +133,7 @@ impl Codegen for Literal {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Eval)]
 pub struct Template(pub String, pub Vec<Box<Expr>>);
 
 impl Codegen for Template {
@@ -142,15 +142,15 @@ impl Codegen for Template {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Eval)]
 pub struct Ident {
     pub name: Token,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Eval)]
 pub struct This;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Eval)]
 pub struct Super;
 
 impl Codegen for This {
@@ -175,14 +175,14 @@ impl Codegen for Ident {
 
 macro_rules! binary_op {
     ($name:ident) => {
-        #[derive(Debug, Clone, PartialEq, Eq)]
+        #[derive(Debug, Clone, PartialEq, Eq, Eval)]
         pub struct $name(pub Box<Expr>, pub Box<Expr>);
     };
 }
 
 macro_rules! unary_op {
     ($name:ident) => {
-        #[derive(Debug, Clone, PartialEq, Eq)]
+        #[derive(Debug, Clone, PartialEq, Eq, Eval)]
         pub struct $name(pub Box<Expr>);
     };
 }
@@ -229,16 +229,16 @@ unary_op!(PreDecr);
 unary_op!(PostIncr);
 unary_op!(PreIncr);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Eval)]
 pub struct Cond(pub Box<Expr>, pub Box<Expr>, pub Box<Expr>);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Eval)]
 pub struct Call {
     pub callee: Box<Expr>,
     pub arguments: Arguments,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Eval)]
 pub struct Member {
     pub object: Box<Expr>,
     pub property: Box<Expr>,
@@ -404,49 +404,3 @@ impl Codegen for Call {
         format!("{}({})", self.callee.to_code(), self.arguments.to_code())
     }
 }
-
-// Evaluate
-impl Eval<Value> for Expr {}
-impl Eval<Value> for Assign {}
-impl Eval<Value> for AddAssign {}
-impl Eval<Value> for SubAssign {}
-impl Eval<Value> for MulAssign {}
-impl Eval<Value> for DivAssign {}
-impl Eval<Value> for ModAssign {}
-impl Eval<Value> for Equal {}
-impl Eval<Value> for StrictEq {}
-impl Eval<Value> for Neq {}
-impl Eval<Value> for StrictNeq {}
-impl Eval<Value> for InstanceOf {}
-impl Eval<Value> for In {}
-impl Eval<Value> for Less {}
-impl Eval<Value> for Greater {}
-impl Eval<Value> for LessEq {}
-impl Eval<Value> for GreaterEq {}
-impl Eval<Value> for Add {}
-impl Eval<Value> for Sub {}
-impl Eval<Value> for Mul {}
-impl Eval<Value> for Div {}
-impl Eval<Value> for Mod {}
-impl Eval<Value> for PreIncr {}
-impl Eval<Value> for PreDecr {}
-impl Eval<Value> for PostIncr {}
-impl Eval<Value> for PostDecr {}
-impl Eval<Value> for Computed {}
-impl Eval<Value> for Member {}
-impl Eval<Value> for Call {}
-impl Eval<Value> for New {}
-impl Eval<Value> for And {}
-impl Eval<Value> for Or {}
-impl Eval<Value> for Cond {}
-impl Eval<Value> for Not {}
-impl Eval<Value> for Neg {}
-impl Eval<Value> for Positive {}
-impl Eval<Value> for Delete {}
-impl Eval<Value> for Void {}
-impl Eval<Value> for Typeof {}
-impl Eval<Value> for Literal {}
-impl Eval<Value> for Template {}
-impl Eval<Value> for Ident {}
-impl Eval<Value> for This {}
-impl Eval<Value> for Super {}

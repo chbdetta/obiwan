@@ -8,6 +8,8 @@ pub enum Value {
     Undefined(Undefined),
     Null(Null),
     NaN(NaN),
+    // This variant represent the nonexist value from a statement
+    None,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -28,6 +30,7 @@ impl From<Value> for bool {
             Value::Undefined(_) => false,
             Value::Null(_) => false,
             Value::NaN(_) => false,
+            Value::None => panic!("None value can not be converted to bool"),
         }
     }
 }
@@ -48,6 +51,7 @@ impl From<Value> for Number {
             Value::Null(_) => 0,
             // FIXME:
             Value::NaN(_) => std::i32::MAX,
+            Value::None => panic!("None value can not be converted to number"),
         }
     }
 }
@@ -66,6 +70,7 @@ impl From<Value> for String {
             Value::Undefined(_) => format!("undefined"),
             Value::Null(_) => format!("null"),
             Value::NaN(_) => format!("NaN"),
+            Value::None => panic!("None value can not be converted to string"),
         }
     }
 }
@@ -95,6 +100,7 @@ impl std::fmt::Display for Value {
                 Value::Undefined(_) => format!("undefined"),
                 Value::Null(_) => format!("null"),
                 Value::NaN(_) => format!("NaN"),
+                Value::None => String::new(),
             }
         )
     }

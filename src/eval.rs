@@ -7,32 +7,27 @@ pub use val::{Number, Value};
 use crate::ast::{expr, expr::*, stmt, stmt::*, ExprOrStmt, Program};
 
 pub trait Evaluator<T> {
-    type Output;
-    fn eval(&mut self, ast: &T) -> Self::Output;
+    fn eval(&mut self, ast: &T) -> Value;
 }
 
 impl<V: Evaluator<T>, T> Evaluator<Box<T>> for V {
-    type Output = V::Output;
-    fn eval(&mut self, ast: &Box<T>) -> Self::Output {
+    fn eval(&mut self, ast: &Box<T>) -> Value {
         self.eval(&**ast)
     }
 }
 
-pub trait Eval<T>: Sized {
-    fn eval<U>(&self, evaluator: &mut U) -> T
+pub trait Eval: Sized {
+    fn eval<U>(&self, evaluator: &mut U) -> Value
     where
-        U: Evaluator<Self, Output = T>,
-    {
-        evaluator.eval(self)
-    }
+        U: Evaluator<Self>;
 }
 
-impl<V: Eval<T>, T> Eval<T> for Box<V> {
-    fn eval<U>(&self, evaluator: &mut U) -> T
+impl<V: Eval> Eval for Box<V> {
+    fn eval<U>(&self, evaluator: &mut U) -> Value
     where
-        U: Evaluator<Self, Output = T>,
+        U: Evaluator<Self>,
     {
-        evaluator.eval(self)
+        (&*self).eval(evaluator)
     }
 }
 
@@ -52,42 +47,42 @@ impl ObiwanEval {
 }
 
 impl Evaluator<StmtList> for ObiwanEval {
-    type Output = ();
-    fn eval(&mut self, stmts: &StmtList) -> Self::Output {
+    fn eval(&mut self, stmts: &StmtList) -> Value {
         for stmt in stmts {
             stmt.eval(self);
         }
+
+        Value::None
     }
 }
 
 impl Evaluator<Program> for ObiwanEval {
-    type Output = ();
-    fn eval(&mut self, ast: &Program) -> Self::Output {
+    fn eval(&mut self, ast: &Program) -> Value {
         match ast {
             Program::Script(stmts) => {
                 stmts.eval(self);
             }
             _ => unimplemented!(),
         }
+
+        Value::None
     }
-                }
+}
 
 impl Evaluator<ExprOrStmt> for ObiwanEval {
-    type Output = ();
-    fn eval(&mut self, ast: &ExprOrStmt) -> Self::Output {
+    fn eval(&mut self, ast: &ExprOrStmt) -> Value {
         match ast {
             // TODO: we ignore the return value of the expression
-            ExprOrStmt::Expr(a) => {
-                a.eval(self);
-            }
+            ExprOrStmt::Expr(a) => a.eval(self),
             ExprOrStmt::Stmt(a) => a.eval(self),
-        }
+        };
+
+        Value::None
     }
 }
 
 impl Evaluator<Stmt> for ObiwanEval {
-    type Output = ();
-    fn eval(&mut self, ast: &Stmt) -> Self::Output {
+    fn eval(&mut self, ast: &Stmt) -> Value {
         match ast {
             Stmt::Block(a) => a.eval(self),
             Stmt::Empty(a) => a.eval(self),
@@ -109,142 +104,138 @@ impl Evaluator<Stmt> for ObiwanEval {
             Stmt::FunctionDeclr(a) => a.eval(self),
             Stmt::GeneratorDeclr(a) => a.eval(self),
             Stmt::LexicalDeclr(a) => a.eval(self),
-        }
+        };
+
+        Value::None
     }
 }
 
 impl Evaluator<Block> for ObiwanEval {
-    type Output = ();
-    fn eval(&mut self, ast: &Block) -> Self::Output {
+    fn eval(&mut self, ast: &Block) -> Value {
         for stmt in &ast.stmts {
             stmt.eval(self);
         }
+
+        Value::None
     }
 }
 
 impl Evaluator<Empty> for ObiwanEval {
-    type Output = ();
-    fn eval(&mut self, ast: &Empty) -> Self::Output {}
+    fn eval(&mut self, ast: &Empty) -> Value {
+        Value::None
+    }
 }
 
 impl Evaluator<stmt::Expr> for ObiwanEval {
-    type Output = ();
-    fn eval(&mut self, ast: &stmt::Expr) -> Self::Output {
+    fn eval(&mut self, ast: &stmt::Expr) -> Value {
         ast.0.eval(self);
+
+        Value::None
     }
 }
 
 impl Evaluator<If> for ObiwanEval {
-    type Output = ();
-    fn eval(&mut self, ast: &If) -> Self::Output {
+    fn eval(&mut self, ast: &If) -> Value {
         if ast.cond.eval(self).into() {
             ast.body.eval(self);
         } else if let Some(b) = &ast.body_else {
             b.eval(self);
         }
+
+        Value::None
     }
 }
 
 impl Evaluator<While> for ObiwanEval {
-    type Output = ();
-    fn eval(&mut self, ast: &While) -> Self::Output {
+    fn eval(&mut self, ast: &While) -> Value {
         while ast.cond.eval(self).into() {
             ast.body.eval(self);
         }
+
+        Value::None
     }
 }
 
 impl Evaluator<DoWhile> for ObiwanEval {
-    type Output = ();
-    fn eval(&mut self, ast: &DoWhile) -> Self::Output {
+    fn eval(&mut self, ast: &DoWhile) -> Value {
         ast.body.eval(self);
 
         while ast.cond.eval(self).into() {
             ast.body.eval(self);
         }
+
+        Value::None
     }
 }
 
 impl Evaluator<For> for ObiwanEval {
-    type Output = ();
-    fn eval(&mut self, ast: &For) -> Self::Output {
+    fn eval(&mut self, ast: &For) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<Switch> for ObiwanEval {
-    type Output = ();
-    fn eval(&mut self, ast: &Switch) -> Self::Output {
+    fn eval(&mut self, ast: &Switch) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<Continue> for ObiwanEval {
-    type Output = ();
-    fn eval(&mut self, ast: &Continue) -> Self::Output {
+    fn eval(&mut self, ast: &Continue) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<Break> for ObiwanEval {
-    type Output = ();
-    fn eval(&mut self, ast: &Break) -> Self::Output {
+    fn eval(&mut self, ast: &Break) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<Return> for ObiwanEval {
-    type Output = ();
-    fn eval(&mut self, ast: &Return) -> Self::Output {
+    fn eval(&mut self, ast: &Return) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<With> for ObiwanEval {
-    type Output = ();
-    fn eval(&mut self, ast: &With) -> Self::Output {
+    fn eval(&mut self, ast: &With) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<Labeled> for ObiwanEval {
-    type Output = ();
-    fn eval(&mut self, ast: &Labeled) -> Self::Output {
+    fn eval(&mut self, ast: &Labeled) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<Throw> for ObiwanEval {
-    type Output = ();
-    fn eval(&mut self, ast: &Throw) -> Self::Output {
+    fn eval(&mut self, ast: &Throw) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<Try> for ObiwanEval {
-    type Output = ();
-    fn eval(&mut self, ast: &Try) -> Self::Output {
+    fn eval(&mut self, ast: &Try) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<Debugger> for ObiwanEval {
-    type Output = ();
-    fn eval(&mut self, ast: &Debugger) -> Self::Output {
+    fn eval(&mut self, ast: &Debugger) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<ClassDeclr> for ObiwanEval {
-    type Output = ();
-    fn eval(&mut self, ast: &ClassDeclr) -> Self::Output {
+    fn eval(&mut self, ast: &ClassDeclr) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<LexicalDeclr> for ObiwanEval {
-    type Output = ();
-    fn eval(&mut self, ast: &LexicalDeclr) -> Self::Output {
+    fn eval(&mut self, ast: &LexicalDeclr) -> Value {
         for VariableDeclarator { ident, init } in &ast.declarations {
             if let expr::Expr::Ident(id) = ident {
                 if let Some(v) = init {
@@ -257,19 +248,19 @@ impl Evaluator<LexicalDeclr> for ObiwanEval {
                 panic!("Delcartion should have identifier as LHS")
             }
         }
+
+        Value::None
     }
 }
 
 impl Evaluator<FunctionDeclr> for ObiwanEval {
-    type Output = ();
-    fn eval(&mut self, ast: &FunctionDeclr) -> Self::Output {
+    fn eval(&mut self, ast: &FunctionDeclr) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<GeneratorDeclr> for ObiwanEval {
-    type Output = ();
-    fn eval(&mut self, ast: &GeneratorDeclr) -> Self::Output {
+    fn eval(&mut self, ast: &GeneratorDeclr) -> Value {
         unimplemented!();
     }
 }
@@ -277,8 +268,7 @@ impl Evaluator<GeneratorDeclr> for ObiwanEval {
 // Expression
 
 impl Evaluator<expr::Expr> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &expr::Expr) -> Self::Output {
+    fn eval(&mut self, ast: &expr::Expr) -> Value {
         match ast {
             expr::Expr::Assign(e) => e.eval(self),
             expr::Expr::AddAssign(e) => e.eval(self),
@@ -343,8 +333,7 @@ impl Evaluator<expr::Expr> for ObiwanEval {
 }
 
 impl Evaluator<Assign> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &Assign) -> Self::Output {
+    fn eval(&mut self, ast: &Assign) -> Value {
         // TODO: support all the LHS assign
         if let expr::Expr::Ident(id) = &*ast.0 {
             if self.state.is_declared(id) {
@@ -361,85 +350,73 @@ impl Evaluator<Assign> for ObiwanEval {
 }
 
 impl Evaluator<AddAssign> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &AddAssign) -> Self::Output {
+    fn eval(&mut self, ast: &AddAssign) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<SubAssign> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &SubAssign) -> Self::Output {
+    fn eval(&mut self, ast: &SubAssign) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<MulAssign> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &MulAssign) -> Self::Output {
+    fn eval(&mut self, ast: &MulAssign) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<DivAssign> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &DivAssign) -> Self::Output {
+    fn eval(&mut self, ast: &DivAssign) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<ModAssign> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &ModAssign) -> Self::Output {
+    fn eval(&mut self, ast: &ModAssign) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<Equal> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &Equal) -> Self::Output {
+    fn eval(&mut self, ast: &Equal) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<StrictEq> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &StrictEq) -> Self::Output {
+    fn eval(&mut self, ast: &StrictEq) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<Neq> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &Neq) -> Self::Output {
+    fn eval(&mut self, ast: &Neq) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<StrictNeq> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &StrictNeq) -> Self::Output {
+    fn eval(&mut self, ast: &StrictNeq) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<InstanceOf> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &InstanceOf) -> Self::Output {
+    fn eval(&mut self, ast: &InstanceOf) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<In> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &In) -> Self::Output {
+    fn eval(&mut self, ast: &In) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<Less> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &Less) -> Self::Output {
+    fn eval(&mut self, ast: &Less) -> Value {
         let a: Number = ast.0.eval(self).into();
         let b: Number = ast.1.eval(self).into();
         Value::Boolean(a < b)
@@ -447,8 +424,7 @@ impl Evaluator<Less> for ObiwanEval {
 }
 
 impl Evaluator<Greater> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &Greater) -> Self::Output {
+    fn eval(&mut self, ast: &Greater) -> Value {
         let a: Number = ast.0.eval(self).into();
         let b: Number = ast.1.eval(self).into();
         Value::Boolean(a > b)
@@ -456,8 +432,7 @@ impl Evaluator<Greater> for ObiwanEval {
 }
 
 impl Evaluator<LessEq> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &LessEq) -> Self::Output {
+    fn eval(&mut self, ast: &LessEq) -> Value {
         let a: Number = ast.0.eval(self).into();
         let b: Number = ast.1.eval(self).into();
         Value::Boolean(a <= b)
@@ -465,8 +440,7 @@ impl Evaluator<LessEq> for ObiwanEval {
 }
 
 impl Evaluator<GreaterEq> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &GreaterEq) -> Self::Output {
+    fn eval(&mut self, ast: &GreaterEq) -> Value {
         let a: Number = ast.0.eval(self).into();
         let b: Number = ast.1.eval(self).into();
         Value::Boolean(a >= b)
@@ -474,8 +448,7 @@ impl Evaluator<GreaterEq> for ObiwanEval {
 }
 
 impl Evaluator<Add> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &Add) -> Self::Output {
+    fn eval(&mut self, ast: &Add) -> Value {
         let a: Number = ast.0.eval(self).into();
         let b: Number = ast.1.eval(self).into();
         Value::Number(a + b)
@@ -483,8 +456,7 @@ impl Evaluator<Add> for ObiwanEval {
 }
 
 impl Evaluator<Sub> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &Sub) -> Self::Output {
+    fn eval(&mut self, ast: &Sub) -> Value {
         let a: Number = ast.0.eval(self).into();
         let b: Number = ast.1.eval(self).into();
         Value::Number(a - b)
@@ -492,8 +464,7 @@ impl Evaluator<Sub> for ObiwanEval {
 }
 
 impl Evaluator<Mul> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &Mul) -> Self::Output {
+    fn eval(&mut self, ast: &Mul) -> Value {
         let a: Number = ast.0.eval(self).into();
         let b: Number = ast.1.eval(self).into();
         Value::Number(a * b)
@@ -501,8 +472,7 @@ impl Evaluator<Mul> for ObiwanEval {
 }
 
 impl Evaluator<Div> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &Div) -> Self::Output {
+    fn eval(&mut self, ast: &Div) -> Value {
         let a: Number = ast.0.eval(self).into();
         let b: Number = ast.1.eval(self).into();
         Value::Number(a / b)
@@ -510,8 +480,7 @@ impl Evaluator<Div> for ObiwanEval {
 }
 
 impl Evaluator<Mod> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &Mod) -> Self::Output {
+    fn eval(&mut self, ast: &Mod) -> Value {
         let a: Number = ast.0.eval(self).into();
         let b: Number = ast.1.eval(self).into();
         Value::Number(a % b)
@@ -519,8 +488,7 @@ impl Evaluator<Mod> for ObiwanEval {
 }
 
 impl Evaluator<PreIncr> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &PreIncr) -> Self::Output {
+    fn eval(&mut self, ast: &PreIncr) -> Value {
         let a: Number = ast.0.eval(self).into();
         let new_val = Value::Number(a + 1);
         if let expr::Expr::Ident(id) = &*ast.0 {
@@ -534,8 +502,7 @@ impl Evaluator<PreIncr> for ObiwanEval {
 }
 
 impl Evaluator<PreDecr> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &PreDecr) -> Self::Output {
+    fn eval(&mut self, ast: &PreDecr) -> Value {
         let a: Number = ast.0.eval(self).into();
         let new_val = Value::Number(a - 1);
         if let expr::Expr::Ident(id) = &*ast.0 {
@@ -549,8 +516,7 @@ impl Evaluator<PreDecr> for ObiwanEval {
 }
 
 impl Evaluator<PostIncr> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &PostIncr) -> Self::Output {
+    fn eval(&mut self, ast: &PostIncr) -> Value {
         let a: Number = ast.0.eval(self).into();
         let new_val = Value::Number(a + 1);
         if let expr::Expr::Ident(id) = &*ast.0 {
@@ -564,8 +530,7 @@ impl Evaluator<PostIncr> for ObiwanEval {
 }
 
 impl Evaluator<PostDecr> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &PostDecr) -> Self::Output {
+    fn eval(&mut self, ast: &PostDecr) -> Value {
         let a: Number = ast.0.eval(self).into();
         let new_val = Value::Number(a - 1);
         if let expr::Expr::Ident(id) = &*ast.0 {
@@ -579,36 +544,31 @@ impl Evaluator<PostDecr> for ObiwanEval {
 }
 
 impl Evaluator<Computed> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &Computed) -> Self::Output {
+    fn eval(&mut self, ast: &Computed) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<Member> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &Member) -> Self::Output {
+    fn eval(&mut self, ast: &Member) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<Call> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &Call) -> Self::Output {
+    fn eval(&mut self, ast: &Call) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<New> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &New) -> Self::Output {
+    fn eval(&mut self, ast: &New) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<And> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &And) -> Self::Output {
+    fn eval(&mut self, ast: &And) -> Value {
         let a: bool = ast.0.eval(self).into();
         let b: bool = ast.1.eval(self).into();
         Value::Boolean(a && b)
@@ -616,8 +576,7 @@ impl Evaluator<And> for ObiwanEval {
 }
 
 impl Evaluator<Or> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &Or) -> Self::Output {
+    fn eval(&mut self, ast: &Or) -> Value {
         let a: bool = ast.0.eval(self).into();
         let b: bool = ast.1.eval(self).into();
         Value::Boolean(a || b)
@@ -625,8 +584,7 @@ impl Evaluator<Or> for ObiwanEval {
 }
 
 impl Evaluator<Cond> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &Cond) -> Self::Output {
+    fn eval(&mut self, ast: &Cond) -> Value {
         let a: bool = ast.0.eval(self).into();
         let b = ast.1.eval(self);
         let c = ast.2.eval(self);
@@ -640,32 +598,28 @@ impl Evaluator<Cond> for ObiwanEval {
 }
 
 impl Evaluator<Not> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &Not) -> Self::Output {
+    fn eval(&mut self, ast: &Not) -> Value {
         let a: bool = ast.0.eval(self).into();
         Value::Boolean(!a)
     }
 }
 
 impl Evaluator<Neg> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &Neg) -> Self::Output {
+    fn eval(&mut self, ast: &Neg) -> Value {
         let a: Number = ast.0.eval(self).into();
         Value::Number(-a)
     }
 }
 
 impl Evaluator<Positive> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &Positive) -> Self::Output {
+    fn eval(&mut self, ast: &Positive) -> Value {
         let a: Number = ast.0.eval(self).into();
         Value::Number(a)
     }
 }
 
 impl Evaluator<Delete> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &Delete) -> Self::Output {
+    fn eval(&mut self, ast: &Delete) -> Value {
         if let expr::Expr::Ident(id) = &*ast.0 {
             self.state.remove(&id);
         } else {
@@ -678,22 +632,19 @@ impl Evaluator<Delete> for ObiwanEval {
 }
 
 impl Evaluator<Void> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &Void) -> Self::Output {
+    fn eval(&mut self, ast: &Void) -> Value {
         Value::Undefined(val::Undefined)
     }
 }
 
 impl Evaluator<Typeof> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &Typeof) -> Self::Output {
+    fn eval(&mut self, ast: &Typeof) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<Literal> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &Literal) -> Self::Output {
+    fn eval(&mut self, ast: &Literal) -> Value {
         match &ast.value {
             LiteralValue::String(s) => Value::String(s.clone()),
             LiteralValue::Number(i) => Value::Number(*i),
@@ -704,29 +655,25 @@ impl Evaluator<Literal> for ObiwanEval {
 }
 
 impl Evaluator<Template> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &Template) -> Self::Output {
+    fn eval(&mut self, ast: &Template) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<Ident> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &Ident) -> Self::Output {
+    fn eval(&mut self, ast: &Ident) -> Value {
         self.state.get(ast)
     }
 }
 
 impl Evaluator<This> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &This) -> Self::Output {
+    fn eval(&mut self, ast: &This) -> Value {
         unimplemented!();
     }
 }
 
 impl Evaluator<Super> for ObiwanEval {
-    type Output = Value;
-    fn eval(&mut self, ast: &Super) -> Self::Output {
+    fn eval(&mut self, ast: &Super) -> Value {
         unimplemented!();
     }
 }
