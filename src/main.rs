@@ -9,20 +9,17 @@ fn main() {
             Arg::with_name("token")
                 .short("t")
                 .long("token")
-                .takes_value(true)
                 .help("Output TokenList instead of evaluation result"),
         )
         .arg(
             Arg::with_name("code")
                 .long("code")
-                .takes_value(true)
                 .help("Output formatted code instead of evaluation result"),
         )
         .arg(
             Arg::with_name("ast")
                 .short("a")
                 .long("ast")
-                .takes_value(true)
                 .help("Output AST instead of evaluation result"),
         )
         .arg(
