@@ -84,7 +84,15 @@ fn stmt_for(input: Input) -> ParseResult<Stmt> {
         pair(
             preceded(
                 t("for"),
-                delimited(t("("), tuple((parse_expr, parse_expr, parse_expr)), t(")")),
+                delimited(
+                    t("("),
+                    tuple((
+                        parse_expr,
+                        preceded(t(";"), parse_expr),
+                        preceded(t(";"), parse_expr),
+                    )),
+                    t(")"),
+                ),
             ),
             stmt,
         ),
